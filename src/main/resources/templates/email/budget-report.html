@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+    <style>
+        .summary-card {
+            background-color: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .metric {
+            background: linear-gradient(135deg, #667eea15 0%, #764ba215 100%);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .metric-label {
+            font-size: 12px;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+        }
+        .metric-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+        .metric-value.positive {
+            color: #28a745;
+        }
+        .metric-value.negative {
+            color: #dc3545;
+        }
+        .section-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+            margin-top: 30px;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        .date-info {
+            text-align: center;
+            color: #6c757d;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        /* Card-based layout for items (mobile-friendly) */
+        .item-card {
+            background-color: #ffffff;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        .item-card.income-card {
+            border-left: 4px solid #28a745;
+        }
+        .item-card.expense-card {
+            border-left: 4px solid #dc3545;
+        }
+        .item-card.investment-card {
+            border-left: 4px solid #667eea;
+        }
+        .item-card-header {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .item-card-amount {
+            font-size: 20px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .item-card.income-card .item-card-amount {
+            color: #28a745;
+        }
+        .item-card.expense-card .item-card-amount {
+            color: #dc3545;
+        }
+        .item-field {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .item-field:last-child {
+            border-bottom: none;
+        }
+        .item-field-label {
+            font-weight: 600;
+            color: #6c757d;
+            font-size: 14px;
+            flex: 0 0 40%;
+        }
+        .item-field-value {
+            color: #333;
+            font-size: 14px;
+            text-align: right;
+            flex: 1;
+            word-wrap: break-word;
+        }
+        .no-data {
+            text-align: center;
+            color: #6c757d;
+            padding: 20px;
+            font-style: italic;
+        }
+        .investment-badge {
+            display: inline-block;
+            background-color: #667eea;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+        .section-subtitle {
+            font-size: 16px;
+            font-weight: 600;
+            color: #6c757d;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            padding-left: 10px;
+            border-left: 3px solid #6c757d;
+        }
+        .section-subtitle.income-section {
+            color: #28a745;
+            border-left-color: #28a745;
+        }
+        .section-subtitle.expense-section {
+            color: #dc3545;
+            border-left-color: #dc3545;
+        }
+        .section-subtitle.investment-section {
+            color: #667eea;
+            border-left-color: #667eea;
+        }
+        .percentage-bar {
+            width: 100%;
+            height: 10px;
+            background-color: #e9ecef;
+            border-radius: 5px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+        .percentage-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s ease;
+        }
+        .percentage-fill.positive {
+            background: linear-gradient(90deg, #28a745 0%, #20c997 100%);
+        }
+        .percentage-fill.negative {
+            background: linear-gradient(90deg, #dc3545 0%, #c82333 100%);
+        }
+    </style>
+
+    <div class="date-info">
+        <p><strong>Report Generated:</strong> <span th:text="${reportDate}">Date</span></p>
+        <p><strong>For:</strong> <span th:text="${userName}">User Name</span></p>
+    </div>
+
+    <!-- Summary Metrics -->
+    <div class="summary-grid">
+        <div class="metric">
+            <div class="metric-label">Total Income</div>
+            <div class="metric-value positive" th:text="${formattedTotalIncome}">₹0.00</div>
+        </div>
+        <div class="metric">
+            <div class="metric-label">Total Expenses</div>
+            <div class="metric-value negative" th:text="${formattedTotalExpenses}">₹0.00</div>
+        </div>
+        <div class="metric">
+            <div class="metric-label">Surplus/Deficit</div>
+            <div class="metric-value"
+                 th:classappend="${budgetSummary.totalSurplus != null && budgetSummary.totalSurplus.compareTo(T(java.math.BigDecimal).ZERO) >= 0} ? 'positive' : 'negative'"
+                 th:text="${formattedTotalSurplus}">₹0.00</div>
+        </div>
+        <div class="metric">
+            <div class="metric-label">Investments</div>
+            <div class="metric-value" th:text="${formattedTotalInvestments}">₹0.00</div>
+        </div>
+    </div>
+
+    <!-- Key Ratios -->
+    <div class="section-title">📊 Key Financial Ratios</div>
+    <div class="summary-card">
+        <div class="item-field" style="margin-top: 15px;">
+            <span class="item-field-label">Investments (% of Income):</span>
+            <span class="item-field-value positive"
+                  th:text="${formatter.formatNumber(budgetSummary.investmentPercentage) + '%'}">0.00%</span>
+        </div>
+        <div class="percentage-bar">
+            <div class="percentage-fill positive"
+                 th:style="'width: ' + ${investmentRateWidth} + '%'"></div>
+        </div>
+
+        <div class="item-field" style="margin-top: 15px;">
+            <span class="item-field-label">Living Expenses (% of Income):</span>
+            <span class="item-field-value negative"
+                  th:text="${formatter.formatNumber(budgetSummary.nonInvestmentExpensePercentage) + '%'}">0.00%</span>
+        </div>
+        <div class="percentage-bar">
+            <div class="percentage-fill negative"
+                 th:style="'width: ' + ${expenseRateWidth} + '%'"></div>
+        </div>
+        <div class="item-field">
+            <span class="item-field-label">Surplus/Deficit:</span>
+            <span class="item-field-value"
+                  th:classappend="${budgetSummary.surplusOrDeficitRate != null && budgetSummary.surplusOrDeficitRate.compareTo(T(java.math.BigDecimal).ZERO) >= 0} ? 'positive' : 'negative'"
+                  th:text="${formatter.formatNumber(budgetSummary.surplusOrDeficitRate) + '%'}">0.00%</span>
+        </div>
+        <div class="percentage-bar">
+            <div class="percentage-fill"
+                 th:classappend="${budgetSummary.surplusOrDeficitRate != null && budgetSummary.surplusOrDeficitRate.compareTo(T(java.math.BigDecimal).ZERO) >= 0} ? 'positive' : 'negative'"
+                 th:style="'width: ' + ${surplusRateWidth} + '%'"></div>
+        </div>
+    </div>
+
+    <!-- Income Details -->
+    <div class="section-title">💰 Income Details</div>
+    <div th:if="${incomeItems != null && !incomeItems.isEmpty()}">
+        <div class="section-subtitle income-section">Income Sources</div>
+        <div class="item-card income-card" th:each="item : ${incomeItems}">
+            <div class="item-card-header">
+                <span th:text="${item.itemName}">Item Name</span>
+                <span class="item-card-amount" th:text="${formatter.formatCurrency(item.amount)}">₹0.00</span>
+            </div>
+
+            <div class="item-field" th:if="${item.description != null && !#strings.isEmpty(item.description)}">
+                <span class="item-field-label">Description:</span>
+                <span class="item-field-value" th:text="${item.description}">Description</span>
+            </div>
+        </div>
+    </div>
+    <div th:unless="${incomeItems != null && !incomeItems.isEmpty()}">
+        <p class="no-data">No income items found</p>
+    </div>
+
+    <!-- Expense Details -->
+    <div class="section-title">💳 Expense Details</div>
+    <div th:if="${expenseItems != null && !expenseItems.isEmpty()}">
+
+        <!-- Investment Expenses -->
+        <div class="section-subtitle investment-section">💎 Investment Expenses</div>
+        <th:block th:each="item : ${expenseItems}">
+            <div class="item-card investment-card" th:if="${item.isInvestment != null && item.isInvestment == true}">
+                <div class="item-card-header">
+                    <span>
+                        <span th:text="${item.itemName}">Item Name</span>
+                    </span>
+                    <span class="item-card-amount" th:text="${formatter.formatCurrency(item.amount)}">₹0.00</span>
+                </div>
+
+                <div class="item-field" th:if="${item.description != null && !#strings.isEmpty(item.description)}">
+                    <span class="item-field-label">Description:</span>
+                    <span class="item-field-value" th:text="${item.description}">Description</span>
+                </div>
+            </div>
+        </th:block>
+
+        <!-- Non-Investment Expenses -->
+        <div class="section-subtitle expense-section">💸 Living Expenses</div>
+        <th:block th:each="item : ${expenseItems}">
+            <div class="item-card expense-card" th:if="${item.isInvestment == null || item.isInvestment == false}">
+                <div class="item-card-header">
+                    <span th:text="${item.itemName}">Item Name</span>
+                    <span class="item-card-amount" th:text="${formatter.formatCurrency(item.amount)}">₹0.00</span>
+                </div>
+
+                <div class="item-field" th:if="${item.description != null && !#strings.isEmpty(item.description)}">
+                    <span class="item-field-label">Description:</span>
+                    <span class="item-field-value" th:text="${item.description}">Description</span>
+                </div>
+            </div>
+        </th:block>
+
+    </div>
+    <div th:unless="${expenseItems != null && !expenseItems.isEmpty()}">
+        <p class="no-data">No expense items found</p>
+    </div>
+
+    <div class="summary-card" style="margin-top: 30px;">
+        <p style="margin: 0; text-align: center; font-size: 14px;">
+            <strong>Summary:</strong> You have <span th:text="${incomeItems != null ? incomeItems.size() : 0}">0</span> income source(s)
+            and <span th:text="${expenseItems != null ? expenseItems.size() : 0}">0</span> expense item(s) in your budget.
+        </p>
+        <p style="margin: 10px 0 0 0; text-align: center; font-size: 13px; color: #6c757d;" th:if="${budgetSummary.totalInvestments != null && budgetSummary.totalInvestments.compareTo(T(java.math.BigDecimal).ZERO) >= 0}">
+            🎉 Great job! You have an investments of <strong th:text="${formattedTotalInvestments}">₹0.00</strong> this month.
+        </p>
+    </div>
+</body>
+</html>
+

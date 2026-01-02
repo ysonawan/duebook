@@ -1,0 +1,22 @@
+/* Form styling - Tailwind handles most */
+
+/* Optional: Custom focus styles if needed */
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+}
+
+/* Loading state opacity */
+input:disabled,
+select:disabled,
+textarea:disabled {
+  background-color: #f3f4f6;
+  cursor: not-allowed;
+}
+
+/* Smooth transitions */
+button {
+  transition: all 0.2s ease;
+}
+

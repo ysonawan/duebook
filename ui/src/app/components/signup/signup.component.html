@@ -1,0 +1,213 @@
+<div class="min-h-screen flex flex-col lg:flex-row bg-gray-50">
+
+    <!-- LEFT: Brand & Value Proposition -->
+    <div class="lg:flex lg:w-1/2 bg-gradient-to-br from-blue-700 to-teal-600 p-14 flex-col justify-between">
+
+        <!-- Brand -->
+        <div>
+            <div class="flex items-center gap-3 mb-16">
+                <img src="assets/duebook.png" alt="Duebook Logo" class="w-14 h-14 object-contain">
+                <span class="text-3xl font-bold text-white">Duebook</span>
+            </div>
+
+            <!-- Main Message -->
+            <h1 class="text-4xl font-bold text-white leading-tight mb-4">
+                Replace Your<br/>Paper Khata Book
+            </h1>
+            <p class="text-blue-100 text-lg max-w-md">
+                Track customer dues, payments, and balances digitally — safely and easily.
+            </p>
+
+            <!-- Features -->
+            <div class="mt-12 space-y-6">
+                <div class="flex gap-4">
+                    <div class="w-10 h-10 rounded-lg bg-white/15 flex items-center justify-center text-xl">📒</div>
+                    <div>
+                        <p class="text-white font-semibold">Simple Digital Ledger</p>
+                        <p class="text-blue-100 text-sm">No accounting knowledge required</p>
+                    </div>
+                </div>
+
+                <div class="flex gap-4">
+                    <div class="w-10 h-10 rounded-lg bg-white/15 flex items-center justify-center text-xl">💰</div>
+                    <div>
+                        <p class="text-white font-semibold">Clear Due Tracking</p>
+                        <p class="text-blue-100 text-sm">Always know who owes you and how much</p>
+                    </div>
+                </div>
+
+                <div class="flex gap-4">
+                    <div class="w-10 h-10 rounded-lg bg-white/15 flex items-center justify-center text-xl">🔒</div>
+                    <div>
+                        <p class="text-white font-semibold">Safe & Secure</p>
+                        <p class="text-blue-100 text-sm">Your data stays private and protected
+
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Testimonial -->
+        <div class="bg-white/15 rounded-xl p-6">
+            <p class="text-white italic text-sm mb-2">
+                “I stopped maintaining paper khata. Duebook made everything simple.”
+            </p>
+            <p class="text-blue-100 text-xs font-medium">
+                — Mahesh Jain, Wholesale Trader
+            </p>
+        </div>
+    </div>
+
+    <!-- RIGHT: Signup Form -->
+    <div class="flex-1 flex items-center justify-center p-6 sm:p-10">
+        <div class="w-full max-w-md bg-white rounded-2xl shadow-sm p-8">
+
+            <!-- Mobile Brand -->
+            <div class="lg:hidden flex items-center justify-center gap-3 mb-6">
+                <div class="w-10 h-10 rounded-lg bg-blue-600 text-white font-bold flex items-center justify-center">
+                    D
+                </div>
+                <span class="text-2xl font-bold text-gray-800">Duebook</span>
+            </div>
+
+            <!-- Header -->
+            <div class="text-center mb-8">
+                <h2 class="text-2xl font-bold text-gray-800 mb-2">
+                    Create your account
+                </h2>
+                <p class="text-gray-600 text-sm">
+                    Start managing customer dues digitally
+                </p>
+            </div>
+
+            <!-- Signup Form -->
+            <form [formGroup]="signupForm" (ngSubmit)="onSubmit()" class="space-y-5" autocomplete="off">
+
+                <!-- Name -->
+                <div>
+                    <label for="name" class="block text-sm font-medium text-gray-700 mb-1">
+                        Full Name
+                    </label>
+                    <input
+                    type="text"
+                    id="name"
+                    formControlName="name"
+                    autocomplete="off"
+                    placeholder="Shop owner name"
+                    [class.border-red-500]="f['name'].invalid && f['name'].touched"
+                    [class.ring-red-500]="f['name'].invalid && f['name'].touched"
+                    class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"/>
+                    <p class="text-red-600 text-sm mt-1" *ngIf="f['name'].invalid && f['name'].touched">
+                        Name is required
+                    </p>
+                </div>
+
+                <!-- Phone -->
+                <div>
+                    <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">
+                        Mobile Number
+                    </label>
+                    <input
+                    type="text"
+                    id="phone"
+                    [maxLength]="10"
+                    formControlName="phone"
+                    autocomplete="off"
+                    placeholder="10-digit phone number"
+                    [class.border-red-500]="f['phone'].invalid && f['phone'].touched"
+                    [class.ring-red-500]="f['phone'].invalid && f['phone'].touched"
+                    class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"/>
+                    <p class="text-red-600 text-sm mt-1" *ngIf="f['phone'].invalid && f['phone'].touched">
+                        <span *ngIf="f['phone'].errors?.['required']">Phone is required</span>
+                    </p>
+                </div>
+
+                <!-- Email  -->
+                <div>
+                    <label for="email" class="block text-sm font-medium text-gray-700 mb-1">
+                        Email (Optional)
+                    </label>
+                    <input
+                    type="email"
+                    id="email"
+                    formControlName="email"
+                    autocomplete="off"
+                    placeholder="For backup & recovery"
+                    [class.border-red-500]="f['email'].invalid && f['email'].touched"
+                    [class.ring-red-500]="f['email'].invalid && f['email'].touched"
+                    class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"/>
+                    <p class="text-red-600 text-sm mt-1" *ngIf="f['email'].invalid && f['email'].touched">
+                        <span *ngIf="f['email'].errors?.['email']">Please enter a valid email</span>
+                    </p>
+                </div>
+
+                <!-- Password -->
+                <div>
+                    <label for="password" class="block text-sm font-medium text-gray-700 mb-1">
+                        Password
+                    </label>
+                    <input
+                    type="password"
+                    id="password"
+                    formControlName="password"
+                    autocomplete="off"
+                    placeholder="Minimum 6 characters"
+                    [class.border-red-500]="f['password'].invalid && f['password'].touched"
+                    [class.ring-red-500]="f['password'].invalid && f['password'].touched"
+                    class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"/>
+                    <p class="text-red-600 text-sm mt-1" *ngIf="f['password'].invalid && f['password'].touched">
+                        <span *ngIf="f['password'].errors?.['required']">Password is required</span>
+                        <span *ngIf="f['password'].errors?.['minlength']">Password must be at least 6 characters</span>
+                    </p>
+                </div>
+
+                <!-- Confirm Password -->
+                <div>
+                    <label for="confirmPassword" class="block text-sm font-medium text-gray-700 mb-1">
+                        Confirm Password
+                    </label>
+                    <input
+                    type="password"
+                    id="confirmPassword"
+                    formControlName="confirmPassword"
+                    autocomplete="off"
+                    placeholder="Re-enter password"
+                    [class.border-red-500]="f['confirmPassword'].invalid && f['confirmPassword'].touched"
+                    [class.ring-red-500]="f['confirmPassword'].invalid && f['confirmPassword'].touched"
+                    class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"/>
+                   <p class="text-red-600 text-sm mt-1" *ngIf="f['confirmPassword'].invalid && f['confirmPassword'].touched">
+                        <span *ngIf="f['confirmPassword'].errors?.['required']">Please confirm your password</span>
+                        <span *ngIf="f['confirmPassword'].errors?.['passwordMismatch']">Passwords do not match</span>
+                    </p>
+                </div>
+
+                <button
+                        type="submit"
+                        class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-6"
+                        [disabled]="loading">
+                    <span *ngIf="loading" class="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></span>
+                    {{ loading ? 'Creating Duebook Account...' : 'Create Duebook Account' }}
+                </button>
+
+                <!-- Terms -->
+                <p class="text-xs text-gray-500 text-center">
+                    By signing up, you agree to our Terms & Privacy Policy
+                </p>
+            </form>
+
+            <!-- Login Link -->
+            <p class="text-center mt-6 text-sm text-gray-600">
+                Already using Duebook?
+                <a routerLink="/login" class="text-blue-600 font-semibold">
+                    Sign in
+                </a>
+            </p>
+
+            <!-- Trust -->
+            <div class="mt-8 text-center text-xs text-gray-500">
+                Secure • Private • Built for shopkeepers
+            </div>
+        </div>
+    </div>
+</div>

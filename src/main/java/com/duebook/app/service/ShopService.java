@@ -1,0 +1,120 @@
+package com.duebook.app.service;
+
+import com.duebook.app.dto.ShopDTO;
+import com.duebook.app.exception.ApplicationException;
+import com.duebook.app.model.Shop;
+import com.duebook.app.model.ShopUser;
+import com.duebook.app.model.User;
+import com.duebook.app.repository.ShopRepository;
+import com.duebook.app.repository.ShopUserRepository;
+import com.duebook.app.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+public class ShopService {
+
+    private final ShopRepository shopRepository;
+    private final ShopUserRepository shopUserRepository;
+    private final UserRepository userRepository;
+
+    /**
+     * Get all shops for the authenticated user
+     */
+    @Transactional(readOnly = true)
+    public List<ShopDTO> getAllShopsForUser(Long userId) {
+        return shopRepository.findAllByUserIdOrderByCreatedAtDesc(userId)
+                .stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Get a specific shop for the authenticated user
+     */
+    @Transactional(readOnly = true)
+    public ShopDTO getShopById(Long shopId, Long userId) {
+        Shop shop = shopRepository.findByIdAndUserId(shopId, userId)
+                .orElseThrow(() -> new ApplicationException("Shop not found or you don't have access to it"));
+        return convertToDTO(shop);
+    }
+
+    /**
+     * Create a new shop
+     */
+    @Transactional
+    public ShopDTO createShop(ShopDTO shopDTO, Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ApplicationException("User not found"));
+
+        // Create the shop
+        Shop shop = new Shop();
+        shop.setName(shopDTO.getName().trim());
+        shop.setAddress(shopDTO.getAddress() != null ? shopDTO.getAddress().trim() : null);
+        shop.setIsActive(true);
+        shop.setCreatedAt(LocalDateTime.now());
+        shop.setUpdatedAt(LocalDateTime.now());
+
+        Shop savedShop = shopRepository.save(shop);
+
+        // Create ShopUser relationship with OWNER role
+        ShopUser shopUser = new ShopUser();
+        shopUser.setShop(savedShop);
+        shopUser.setUser(user);
+        shopUser.setRole(ShopUser.ShopUserRole.OWNER);
+        shopUser.setStatus(ShopUser.ShopUserStatus.ACTIVE);
+        shopUser.setJoinedAt(LocalDateTime.now());
+
+        shopUserRepository.save(shopUser);
+
+        return convertToDTO(savedShop);
+    }
+
+    /**
+     * Update an existing shop
+     */
+    @Transactional
+    public ShopDTO updateShop(Long shopId, ShopDTO shopDTO, Long userId) {
+        Shop shop = shopRepository.findByIdAndUserId(shopId, userId)
+                .orElseThrow(() -> new ApplicationException("Shop not found or you don't have access to it"));
+
+        // Validate that user is OWNER or has update permissions
+        ShopUser shopUser = shopUserRepository.findByShopIdAndUserId(shopId, userId)
+                .orElseThrow(() -> new ApplicationException("Access denied"));
+
+        if (shopUser.getRole() != ShopUser.ShopUserRole.OWNER) {
+            throw new ApplicationException("You don't have permission to update this shop");
+        }
+
+        shop.setName(shopDTO.getName().trim());
+        shop.setAddress(shopDTO.getAddress() != null ? shopDTO.getAddress().trim() : null);
+        if (shopDTO.getIsActive() != null) {
+            shop.setIsActive(shopDTO.getIsActive());
+        }
+        shop.setUpdatedAt(LocalDateTime.now());
+
+        Shop updatedShop = shopRepository.save(shop);
+        return convertToDTO(updatedShop);
+    }
+
+    /**
+     * Convert Shop entity to DTO
+     */
+    private ShopDTO convertToDTO(Shop shop) {
+        ShopDTO dto = new ShopDTO();
+        dto.setId(shop.getId());
+        dto.setName(shop.getName());
+        dto.setAddress(shop.getAddress());
+        dto.setIsActive(shop.getIsActive());
+        dto.setCreatedAt(shop.getCreatedAt());
+        dto.setUpdatedAt(shop.getUpdatedAt());
+        return dto;
+    }
+}
+
