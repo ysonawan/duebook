@@ -1,0 +1,11 @@
+/* Ledger Form Component Styles */
+/* Minimal custom styles - Tailwind handles most styling */
+
+/* Add smooth transitions */
+input:disabled,
+select:disabled,
+textarea:disabled {
+  background-color: #f3f4f6;
+  cursor: not-allowed;
+}
+

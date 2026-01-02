@@ -21,6 +21,12 @@ import { AuthService } from './services/auth.service';
 import { NotificationService } from './services/notification.service';
 import { AuthInterceptor } from './interceptors/auth.interceptor';
 import { HttpErrorInterceptor } from './interceptors/http-error.interceptor';
+import {CustomersComponent} from "./components/customers/customers.component";
+import {CustomerFormComponent} from "./components/customer-form/customer-form.component";
+import {LedgerComponent} from "./components/ledger/ledger.component";
+import {LedgerFormComponent} from "./components/ledger-form/ledger-form.component";
+import {DashboardDuebookComponent} from "./components/dashboard/dashboard-duebook.component";
+import {SuppliersComponent} from "./components/suppliers/suppliers.component";
 
 @NgModule({
     declarations: [
@@ -29,7 +35,13 @@ import { HttpErrorInterceptor } from './interceptors/http-error.interceptor';
         SignupComponent,
         ProfileComponent,
         ShopsComponent,
-        ShopFormComponent
+        ShopFormComponent,
+        CustomersComponent,
+        CustomerFormComponent,
+        SuppliersComponent,
+        LedgerComponent,
+        LedgerFormComponent,
+        DashboardDuebookComponent
     ],
     bootstrap: [AppComponent],
     imports: [

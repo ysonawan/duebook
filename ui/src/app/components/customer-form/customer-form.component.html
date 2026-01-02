@@ -1,0 +1,155 @@
+<div class="bg-gradient-to-br from-slate-50 to-slate-100">
+  <div class="p-4">
+    <div class="max-w-4xl mx-auto">
+
+      <!-- Header -->
+      <div class="mb-6">
+        <h1 class="text-xl md:text-2xl font-bold text-gray-700 mb-2">
+          {{ isEditMode ? 'Edit Customer' : 'Add New Customer' }}
+        </h1>
+        <p class="text-gray-600 text-sm">{{ isEditMode ? 'Update your customer information' : 'Create a new customer to track their transactions' }}</p>
+      </div>
+
+      <!-- Form Card -->
+      <div class="bg-white rounded-xl shadow-md p-6 md:p-8">
+        <form (ngSubmit)="onSubmit()" #customerForm="ngForm" autocomplete="off">
+
+          <!-- Form Grid -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+
+            <!-- Customer Name -->
+            <div class="space-y-2 md:col-span-1">
+              <label for="name" class="block text-sm font-semibold text-gray-700">
+                Customer Name <span class="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                id="name"
+                name="name"
+                [(ngModel)]="customer.name"
+                required
+                placeholder="e.g., John Doe"
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+                [disabled]="loading">
+              <p class="text-xs text-gray-500 mt-1">2-100 characters</p>
+            </div>
+
+            <!-- Phone Number -->
+            <div class="space-y-2 md:col-span-1">
+              <label for="phone" class="block text-sm font-semibold text-gray-700">
+                Phone Number <span class="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                id="phone"
+                name="phone"
+                [maxLength]="10"
+                [(ngModel)]="customer.phone"
+                required
+                placeholder="e.g., 9876543210"
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+                [disabled]="loading">
+              <p class="text-xs text-gray-500 mt-1">10-20 characters</p>
+            </div>
+
+            <!-- Shop Selection -->
+            <div class="space-y-2 md:col-span-1">
+              <label for="shop" class="block text-sm font-semibold text-gray-700">
+                Shop <span class="text-red-500">*</span>
+              </label>
+              <select
+                id="shop"
+                name="shop"
+                [(ngModel)]="customer.shopId"
+                required
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+                [disabled]="loading">
+                <option [value]="undefined" selected>Select a shop</option>
+                <option *ngFor="let shop of shops" [value]="shop.id">{{ shop.name }}</option>
+              </select>
+              <p class="text-xs text-gray-500 mt-1">Required</p>
+            </div>
+
+            <!-- Opening Balance -->
+            <div class="space-y-2 md:col-span-1">
+              <label for="openingBalance" class="block text-sm font-semibold text-gray-700">
+                Opening Balance <span class="text-red-500">*</span>
+              </label>
+              <input
+                type="number"
+                id="openingBalance"
+                name="openingBalance"
+                [(ngModel)]="customer.openingBalance"
+                required
+                step="0.01"
+                min="0"
+                placeholder="0.00"
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+                [disabled]="loading || isEditMode">
+            </div>
+
+            <!-- Current Balance (Edit Mode Only) -->
+            <div *ngIf="isEditMode" class="space-y-2 md:col-span-1">
+              <label for="currentBalance" class="block text-sm font-semibold text-gray-700">
+                Current Balance
+              </label>
+              <input
+                type="number"
+                id="currentBalance"
+                name="currentBalance"
+                [(ngModel)]="customer.currentBalance"
+                step="0.01"
+                disabled
+                placeholder="0.00"
+                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
+               >
+              <p class="text-xs text-gray-500 mt-1">Can be positive or negative</p>
+            </div>
+
+          </div>
+
+          <!-- Form Actions -->
+          <div class="flex flex-col sm:flex-row gap-4 justify-between items-center">
+            <button
+              type="button"
+              (click)="onCancel()"
+              class="w-full sm:w-auto px-8 py-3 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-colors"
+              [disabled]="loading">
+              Cancel
+            </button>
+
+            <button
+              type="submit"
+              class="w-full sm:w-auto px-8 py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              [disabled]="loading">
+              <span *ngIf="!loading">
+                {{ isEditMode ? 'Update Customer' : 'Create Customer' }}
+              </span>
+              <span *ngIf="loading" class="flex items-center gap-2">
+                <i class="fas fa-spinner fa-spin"></i>
+                Processing...
+              </span>
+            </button>
+          </div>
+
+        </form>
+      </div>
+
+      <!-- Info Card -->
+      <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div class="flex gap-3">
+          <i class="fas fa-info-circle text-xl text-blue-600 flex-shrink-0 mt-0.5"></i>
+          <div>
+            <h3 class="font-semibold text-blue-900 mb-1">About Customers</h3>
+            <p class="text-sm text-blue-800">
+              You can create customers for each shop to track their transactions and balances.
+              Opening balance represents the initial amount, and current balance is updated as transactions occur.
+              Customers cannot be deleted to maintain ledger integrity.
+            </p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>

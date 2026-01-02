@@ -68,7 +68,8 @@ CREATE TABLE duebook_schema.customers (
     current_balance NUMERIC(12,2) NOT NULL DEFAULT 0,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (shop_id, phone)
 );
 
 CREATE INDEX idx_customers_shop ON duebook_schema.customers(shop_id);

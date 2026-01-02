@@ -1,0 +1,126 @@
+/* Dashboard DueBook Styles */
+
+:host {
+  display: block;
+}
+
+/* Smooth animations */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-in {
+  animation: slideIn 0.3s ease-out;
+}
+
+/* Card hover effects */
+.card-hover {
+  transition: all 0.3s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+/* Chart container styles */
+.chart-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+/* Responsive grid */
+@media (max-width: 640px) {
+  .grid {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 640px) and (max-width: 1024px) {
+  .lg\:grid-cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .lg\:grid-cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .lg\:grid-cols-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/* Summary card animations */
+.summary-card {
+  animation: slideIn 0.3s ease-out;
+}
+
+.summary-card:nth-child(1) {
+  animation-delay: 0.1s;
+}
+
+.summary-card:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.summary-card:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+.summary-card:nth-child(4) {
+  animation-delay: 0.4s;
+}
+
+/* Loading spinner */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Typography */
+h1 {
+  letter-spacing: -0.02em;
+}
+
+h2 {
+  letter-spacing: -0.01em;
+}
+
+/* Focus states for accessibility */
+[role="button"]:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1), 0 0 0 2px white, 0 0 0 5px rgba(99, 102, 241, 0.5);
+}
+
+/* Gradient backgrounds */
+.gradient-purple {
+  background: linear-gradient(135deg, #9333EA 0%, #EC4899 100%);
+}
+
+.gradient-green {
+  background: linear-gradient(135deg, #22C55E 0%, #10B981 100%);
+}
+
+.gradient-orange {
+  background: linear-gradient(135deg, #F97316 0%, #F59E0B 100%);
+}
+
+.gradient-blue {
+  background: linear-gradient(135deg, #3B82F6 0%, #0099CC 100%);
+}
+

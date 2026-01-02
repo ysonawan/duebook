@@ -39,8 +39,6 @@ export class ShopsComponent implements OnInit {
                 this.loading = false;
             },
             error: (error) => {
-                console.error('Error loading shops:', error);
-                Swal.fire('Error!', 'Failed to load shops', 'error');
                 this.loading = false;
             }
         });
@@ -83,7 +81,6 @@ export class ShopsComponent implements OnInit {
 
     toggleShopStatus(shop: Shop): void {
         const newStatus = !shop.isActive;
-        const action = newStatus ? 'activate' : 'deactivate';
         const actionText = newStatus ? 'activate' : 'deactivate';
 
         Swal.fire({
@@ -104,8 +101,6 @@ export class ShopsComponent implements OnInit {
                         this.loadShops();
                     },
                     error: (error) => {
-                        console.error('Error updating shop status:', error);
-                        Swal.fire('Error!', 'Failed to update shop status', 'error');
                     }
                 });
             }

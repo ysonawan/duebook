@@ -50,11 +50,6 @@ export class ShopFormComponent implements OnInit {
   }
 
   onSubmit(): void {
-    if (!this.shop.name || this.shop.name.trim() === '') {
-      Swal.fire('Error!', 'Please enter a shop name', 'error');
-      return;
-    }
-
     this.loading = true;
 
     if (this.isEditMode && this.shopId) {
