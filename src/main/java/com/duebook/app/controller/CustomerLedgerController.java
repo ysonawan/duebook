@@ -4,6 +4,7 @@ import com.duebook.app.dto.CustomerLedgerDTO;
 import com.duebook.app.service.CustomerLedgerService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -22,6 +23,7 @@ import java.util.Map;
 @RequestMapping("/api/ledger")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*", allowedHeaders = "*")
+@Slf4j
 public class CustomerLedgerController {
 
     private final CustomerLedgerService ledgerService;
@@ -33,7 +35,9 @@ public class CustomerLedgerController {
     @GetMapping
     public ResponseEntity<List<CustomerLedgerDTO>> getAllLedgerEntries(Authentication authentication) {
         Long userId = extractUserId(authentication);
+        log.debug("Fetching all ledger entries for user ID: {}", userId);
         List<CustomerLedgerDTO> entries = ledgerService.getAllLedgerEntriesForUser(userId);
+        log.info("Retrieved {} ledger entries for user ID: {}", entries.size(), userId);
         return ResponseEntity.ok(entries);
     }
 
@@ -45,7 +49,9 @@ public class CustomerLedgerController {
             @PathVariable Long id,
             Authentication authentication) {
         Long userId = extractUserId(authentication);
+        log.debug("Fetching ledger entry ID: {} for user ID: {}", id, userId);
         CustomerLedgerDTO entry = ledgerService.getLedgerEntryById(id, userId);
+        log.info("Retrieved ledger entry ID: {} for user ID: {}", id, userId);
         return ResponseEntity.ok(entry);
     }
 
@@ -57,7 +63,9 @@ public class CustomerLedgerController {
             @Valid @RequestBody CustomerLedgerDTO ledgerDTO,
             Authentication authentication) {
         Long userId = extractUserId(authentication);
+        log.info("Creating new ledger entry for customer ID: {} with amount: {} by user ID: {}", ledgerDTO.getCustomerId(), ledgerDTO.getAmount(), userId);
         CustomerLedgerDTO createdEntry = ledgerService.createLedgerEntry(ledgerDTO, userId);
+        log.info("Ledger entry created successfully with ID: {} by user ID: {}", createdEntry.getId(), userId);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdEntry);
     }
 
@@ -71,7 +79,9 @@ public class CustomerLedgerController {
             Authentication authentication) {
         Long userId = extractUserId(authentication);
         String notes = body != null ? body.get("notes") : null;
+        log.info("Reversing ledger entry ID: {} by user ID: {}", id, userId);
         CustomerLedgerDTO reversedEntry = ledgerService.reverseLedgerEntry(id, userId, notes);
+        log.info("Ledger entry ID: {} reversed successfully by user ID: {}", id, userId);
         return ResponseEntity.status(HttpStatus.CREATED).body(reversedEntry);
     }
 
@@ -83,7 +93,9 @@ public class CustomerLedgerController {
             @PathVariable Long customerId,
             Authentication authentication) {
         Long userId = extractUserId(authentication);
+        log.debug("Fetching ledger entries for customer ID: {} by user ID: {}", customerId, userId);
         List<CustomerLedgerDTO> entries = ledgerService.getLedgerByCustomer(customerId, userId);
+        log.info("Retrieved {} ledger entries for customer ID: {}", entries.size(), customerId);
         return ResponseEntity.ok(entries);
     }
 
@@ -95,7 +107,9 @@ public class CustomerLedgerController {
             @PathVariable Long shopId,
             Authentication authentication) {
         Long userId = extractUserId(authentication);
+        log.debug("Fetching ledger entries for shop ID: {} by user ID: {}", shopId, userId);
         List<CustomerLedgerDTO> entries = ledgerService.getLedgerByShop(shopId, userId);
+        log.info("Retrieved {} ledger entries for shop ID: {}", entries.size(), shopId);
         return ResponseEntity.ok(entries);
     }
 
@@ -106,10 +120,12 @@ public class CustomerLedgerController {
     public ResponseEntity<List<CustomerLedgerDTO>> getLedgerByDateRange(
             @RequestParam String startDate,
             @RequestParam String endDate) {
+        log.debug("Fetching ledger entries between {} and {}", startDate, endDate);
         DateTimeFormatter formatter = DateTimeFormatter.ISO_DATE;
         LocalDate start = LocalDate.parse(startDate, formatter);
         LocalDate end = LocalDate.parse(endDate, formatter);
         List<CustomerLedgerDTO> entries = ledgerService.getLedgerByDateRange(start, end);
+        log.info("Retrieved {} ledger entries for date range {} to {}", entries.size(), startDate, endDate);
         return ResponseEntity.ok(entries);
     }
 
@@ -118,6 +134,7 @@ public class CustomerLedgerController {
      */
     private Long extractUserId(Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated()) {
+            log.warn("Unauthorized ledger access attempt");
             throw new ApplicationException("User not authenticated", "UNAUTHORIZED");
         }
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();

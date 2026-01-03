@@ -15,6 +15,7 @@ public class SignupRequest {
     private String email;
 
     @NotBlank(message = "Phone number is required")
+    @Size(min = 10, max = 10, message = "Phone number must be 10 digits")
     private String phone;
 
     @NotBlank(message = "Password is required")

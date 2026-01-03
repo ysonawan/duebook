@@ -23,6 +23,9 @@ public class Customer {
     @Column(nullable = false)
     private String name;
 
+    @Column(name = "entity_name")
+    private String entityName;
+
     @Column(nullable = false)
     private String phone;
 

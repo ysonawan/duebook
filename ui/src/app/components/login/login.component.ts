@@ -81,7 +81,6 @@ export class LoginComponent {
 
     this.authService.login(this.loginForm.value).subscribe({
       next: () => {
-        this.notificationService.success('Login successful!', 'Success');
         this.router.navigate([this.returnUrl]);
       },
       error: () => {

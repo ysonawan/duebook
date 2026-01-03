@@ -5,6 +5,7 @@ import { ShopService } from '../../services/shop.service';
 import { Customer } from '../../models/customer.model';
 import { Shop } from '../../models/shop.model';
 import Swal from 'sweetalert2';
+import {TimezoneService} from "../../services/timezone.service";
 
 @Component({
   selector: 'app-customers',
@@ -36,7 +37,8 @@ export class CustomersComponent implements OnInit {
   constructor(
     private customerService: CustomerService,
     private shopService: ShopService,
-    private router: Router
+    private router: Router,
+    private timezoneService: TimezoneService
   ) {}
 
   ngOnInit(): void {
@@ -72,7 +74,7 @@ export class CustomersComponent implements OnInit {
   applyFilters(): void {
     this.filteredCustomers = this.customers.filter(customer => {
       const matchesSearch = customer.name.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
-        customer.phone.includes(this.searchTerm);
+        customer.phone.includes(this.searchTerm) || (customer.entityName && customer.entityName.toLowerCase().includes(this.searchTerm));
 
       // Filter by status
       let matchesStatus = true;
@@ -146,15 +148,18 @@ export class CustomersComponent implements OnInit {
     });
   }
 
+  viewLedger(customer: Customer) {
+    this.router.navigate(['/ledger'], { queryParams: { customerId: customer.id } });
+  }
+
   getShopName(shopId: number | undefined): string {
     if (!shopId) return 'N/A';
     const shop = this.shops.find(s => s.id === shopId);
     return shop?.name || 'N/A';
   }
 
-  formatDate(date: string | undefined): string {
-    if (!date) return 'N/A';
-    return new Date(date).toLocaleDateString();
+  formatDate(date: Date): string {
+    return this.timezoneService.formatDateInIndiaTimezone(date, {});
   }
 
   formatCurrency(value: number | undefined): string {
@@ -183,7 +188,7 @@ export class CustomersComponent implements OnInit {
   prepareBalanceDistributionChart(): void {
     // Filter customers with balance > 0
     const activeCustomersWithBalance = this.filteredCustomers
-      .filter(c => c.currentBalance !== 0)
+      .filter(c => c.currentBalance !== 0 && c.currentBalance > 0)
       .sort((a, b) => Math.abs(b.currentBalance) - Math.abs(a.currentBalance))
       .slice(0, 10); // Top 10 customers
 
@@ -201,8 +206,7 @@ export class CustomersComponent implements OnInit {
       tooltip: {
         trigger: 'item',
         formatter: (params: any) => {
-          const sign = activeCustomersWithBalance.find((c: Customer) => c.name === params.name)?.currentBalance ?? 0 < 0 ? '-' : '+';
-          return `${params.name}<br/>Balance: ${sign}₹${params.value.toFixed(2)}`;
+          return `${params.name}<br/>Balance: ₹${params.value.toFixed(2)}`;
         },
         confine: true
       },
@@ -317,4 +321,3 @@ export class CustomersComponent implements OnInit {
     return colors[index % colors.length];
   }
 }
-

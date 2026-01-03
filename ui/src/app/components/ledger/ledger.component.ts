@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { LedgerService } from '../../services/ledger.service';
 import { CustomerService } from '../../services/customer.service';
 import { ShopService } from '../../services/shop.service';
@@ -7,6 +7,7 @@ import { CustomerLedger, LedgerEntryType } from '../../models/ledger.model';
 import { Customer } from '../../models/customer.model';
 import { Shop } from '../../models/shop.model';
 import Swal from 'sweetalert2';
+import {TimezoneService} from "../../services/timezone.service";
 
 @Component({
   selector: 'app-ledger',
@@ -27,14 +28,12 @@ export class LedgerComponent implements OnInit {
   filterType: string = '';
   startDate: string = '';
   endDate: string = '';
-  searchNotes: string = '';
 
   // Summary statistics
   totalDebit: number = 0;
   totalCredit: number = 0;
   netBalance: number = 0;
   totalEntries: number = 0;
-  LedgerEntryType = LedgerEntryType;
 
   // Chart options
   debitCreditTrendChartOptions: any = {};
@@ -48,10 +47,17 @@ export class LedgerComponent implements OnInit {
     private ledgerService: LedgerService,
     private customerService: CustomerService,
     private shopService: ShopService,
-    private router: Router
+    private router: Router,
+    private route: ActivatedRoute,
+    private timezoneService: TimezoneService
   ) {}
 
   ngOnInit(): void {
+    this.route.queryParams.subscribe(params => {
+      if (params['customerId']) {
+        this.filterCustomer = params['customerId'];
+      }
+    });
     this.loadShops();
     this.loadCustomers();
     this.loadLedgerEntries();
@@ -60,8 +66,8 @@ export class LedgerComponent implements OnInit {
 
   setDefaultDateRange(): void {
     const today = new Date();
-    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-    const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+    const firstDay = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate());
+    const lastDay = today;
 
     this.startDate = firstDay.toISOString().split('T')[0];
     this.endDate = lastDay.toISOString().split('T')[0];
@@ -136,13 +142,7 @@ export class LedgerComponent implements OnInit {
         }
       }
 
-      // Filter by notes search
-      let matchesNotes = true;
-      if (this.searchNotes.trim()) {
-        matchesNotes = entry.notes?.toLowerCase().includes(this.searchNotes.toLowerCase()) || false;
-      }
-
-      return matchesShop && matchesCustomer && matchesType && matchesDate && matchesNotes;
+      return matchesShop && matchesCustomer && matchesType && matchesDate;
     });
     this.calculateSummaryStatistics();
   }
@@ -161,7 +161,7 @@ export class LedgerComponent implements OnInit {
 
     // Calculate based on entry type, excluding reversals and reversed entries
     this.totalDebit = effectiveEntries
-      .filter(e => e.entryType === LedgerEntryType.JAMA)
+      .filter(e => e.entryType === LedgerEntryType.BAKI)
       .reduce((sum, e) => sum + (e.amount || 0), 0);
 
     this.totalCredit = effectiveEntries
@@ -178,8 +178,65 @@ export class LedgerComponent implements OnInit {
     this.applyFilters();
   }
 
-  onSearchChange(): void {
-    this.applyFilters();
+  viewLedgerEntry(entry: CustomerLedger): void {
+    Swal.fire({
+      title: 'Ledger Entry Details',
+      html: `
+        <div class="text-left space-y-4">
+          <div class="grid grid-cols-2 gap-4">
+            <div class="space-y-2">
+              <p class="text-xs font-medium text-gray-500 uppercase">ID</p>
+              <p class="text-sm font-semibold text-gray-700">${entry.id || 'N/A'}</p>
+            </div>
+            <div class="space-y-2">
+              <p class="text-xs font-medium text-gray-500 uppercase">Entry Date</p>
+              <p class="text-sm font-semibold text-gray-700">${this.formatDate(entry.entryDate)}</p>
+            </div>
+            <div class="space-y-2">
+              <p class="text-xs font-medium text-gray-500 uppercase">Customer</p>
+              <p class="text-sm font-semibold text-gray-700">${entry.customer?.name || 'N/A'}</p>
+            </div>
+            <div class="space-y-2">
+              <p class="text-xs font-medium text-gray-500 uppercase">Shop</p>
+              <p class="text-sm font-semibold text-gray-700">${this.getShopName(entry.shopId)}</p>
+            </div>
+            <div class="space-y-2">
+              <p class="text-xs font-medium text-gray-500 uppercase">Entry Type</p>
+              <p class="text-sm font-semibold text-gray-700">${entry.entryType}</p>
+            </div>
+            <div class="space-y-2">
+              <p class="text-xs font-medium text-gray-500 uppercase">Amount</p>
+              <p class="text-sm font-semibold text-gray-700">${this.formatCurrency(entry.amount)}</p>
+            </div>
+            <div class="space-y-2">
+              <p class="text-xs font-medium text-gray-500 uppercase">Balance After</p>
+              <p class="text-sm font-semibold text-gray-700">${this.formatCurrency(entry.balanceAfter)}</p>
+            </div>
+            <div class="space-y-2">
+              <p class="text-xs font-medium text-gray-500 uppercase">Created By</p>
+              <p class="text-sm font-semibold text-gray-700">${entry.createdByUser?.name || 'N/A'}</p>
+            </div>
+            <div class="space-y-2">
+              <p class="text-xs font-medium text-gray-500 uppercase">Created At</p>
+              <p class="text-sm font-semibold text-gray-700">${this.formatDateTime(entry.createdAt) || 'N/A'}</p>
+            </div>
+            <div class="space-y-2">
+              <p class="text-xs font-medium text-gray-500 uppercase">Reference Entry ID</p>
+              <p class="text-sm font-semibold text-gray-700">${entry.referenceEntryId || '-'}</p>
+            </div>
+          </div>
+          ${entry.notes ? `
+            <div class="space-y-2 border-t pt-4">
+              <p class="text-xs font-medium text-gray-500 uppercase">Notes</p>
+              <p class="text-sm text-gray-700 bg-gray-50 p-3 rounded">${entry.notes}</p>
+            </div>
+          ` : ''}
+        </div>
+      `,
+      icon: 'info',
+      confirmButtonText: 'Close',
+      width: 600
+    });
   }
 
   hasBeenReversed(entryId: number | undefined): boolean {
@@ -217,7 +274,7 @@ export class LedgerComponent implements OnInit {
             <p><strong>Customer:</strong> ${entry.customer?.name || 'N/A'}</p>
             <p><strong>Type:</strong> ${entry.entryType}</p>
             <p><strong>Amount:</strong> ${entry.amount}</p>
-            <p><strong>Date:</strong> ${new Date(entry.entryDate).toLocaleDateString()}</p>
+            <p><strong>Date:</strong> ${this.formatDate(entry.entryDate)}</p>
           </div>
           <textarea id="reversalNotes" placeholder="Add notes for reversal (optional)" 
             class="w-full px-3 py-2 border border-gray-300 rounded text-sm h-20"></textarea>
@@ -258,7 +315,7 @@ export class LedgerComponent implements OnInit {
 
   getEntryTypeIcon(type: LedgerEntryType): string {
     switch (type) {
-      case LedgerEntryType.JAMA:
+      case LedgerEntryType.BAKI:
         return 'fa-arrow-down text-red-600';
       case LedgerEntryType.PAID:
         return 'fa-arrow-up text-emerald-600';
@@ -271,7 +328,7 @@ export class LedgerComponent implements OnInit {
 
   getEntryTypeColor(type: LedgerEntryType): string {
     switch (type) {
-      case LedgerEntryType.JAMA:
+      case LedgerEntryType.BAKI:
         return 'bg-red-100 text-red-800';
       case LedgerEntryType.PAID:
         return 'bg-emerald-100 text-emerald-800';
@@ -282,9 +339,12 @@ export class LedgerComponent implements OnInit {
     }
   }
 
-  formatDate(date: string | undefined): string {
-    if (!date) return 'N/A';
-    return new Date(date).toLocaleDateString();
+  formatDate(date: Date): string {
+    return this.timezoneService.formatDateOnlyInIndiaTimezone(date, {});
+  }
+
+  formatDateTime(date: Date): string {
+    return this.timezoneService.formatDateInIndiaTimezone(date, {});
   }
 
   formatCurrency(value: number | undefined): string {
@@ -330,7 +390,7 @@ export class LedgerComponent implements OnInit {
         dailyData.set(date, { debit: 0, credit: 0 });
       }
       const data = dailyData.get(date)!;
-      if (entry.entryType === LedgerEntryType.JAMA) {
+      if (entry.entryType === LedgerEntryType.BAKI) {
         data.debit += entry.amount;
       } else {
         data.credit += entry.amount;
@@ -355,7 +415,7 @@ export class LedgerComponent implements OnInit {
         }
       },
       legend: {
-        data: ['Debit (Jama)', 'Credit (Paid)'],
+        data: ['Debit (Baki)', 'Credit (Paid)'],
         textStyle: { fontSize: isMobile ? 10 : 11 }
       },
       grid: {
@@ -379,7 +439,7 @@ export class LedgerComponent implements OnInit {
       },
       series: [
         {
-          name: 'Debit (Jama)',
+          name: 'Debit (Baki)',
           data: debits,
           type: 'line',
           smooth: true,
@@ -408,11 +468,11 @@ export class LedgerComponent implements OnInit {
       !reversedEntryIds.includes(e.id!) && e.entryType !== LedgerEntryType.REVERSAL
     );
 
-    const debitCount = effectiveEntries.filter(e => e.entryType === LedgerEntryType.JAMA).length;
+    const debitCount = effectiveEntries.filter(e => e.entryType === LedgerEntryType.BAKI).length;
     const creditCount = effectiveEntries.filter(e => e.entryType === LedgerEntryType.PAID).length;
 
     const data = [
-      { name: 'Jama (Debit)', value: debitCount, itemStyle: { color: '#FF6B6B' } },
+      { name: 'Baki (Debit)', value: debitCount, itemStyle: { color: '#FF6B6B' } },
       { name: 'Paid (Credit)', value: creditCount, itemStyle: { color: '#51CF66' } }
     ].filter(d => d.value > 0);
 
@@ -524,4 +584,3 @@ export class LedgerComponent implements OnInit {
     };
   }
 }
-

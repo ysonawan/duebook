@@ -1,11 +1,7 @@
 export interface UserProfile {
   id: number;
   name: string;
-  email: string;
+  email?: string;
+  phone: string;
   secondaryEmails: string[];
 }
-
-export interface UpdateSecondaryEmailsRequest {
-  secondaryEmails: string[];
-}
-

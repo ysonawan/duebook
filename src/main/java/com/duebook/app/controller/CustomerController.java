@@ -4,6 +4,7 @@ import com.duebook.app.dto.CustomerDTO;
 import com.duebook.app.service.CustomerService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -19,6 +20,7 @@ import java.util.List;
 @RequestMapping("/api/customers")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*", allowedHeaders = "*")
+@Slf4j
 public class CustomerController {
 
     private final CustomerService customerService;
@@ -30,7 +32,9 @@ public class CustomerController {
     @GetMapping
     public ResponseEntity<List<CustomerDTO>> getAllCustomers(Authentication authentication) {
         Long userId = extractUserId(authentication);
+        log.debug("Fetching all customers for user ID: {}", userId);
         List<CustomerDTO> customers = customerService.getAllCustomersForUser(userId);
+        log.info("Retrieved {} customers for user ID: {}", customers.size(), userId);
         return ResponseEntity.ok(customers);
     }
 
@@ -42,7 +46,9 @@ public class CustomerController {
             @PathVariable Long id,
             Authentication authentication) {
         Long userId = extractUserId(authentication);
+        log.debug("Fetching customer ID: {} for user ID: {}", id, userId);
         CustomerDTO customer = customerService.getCustomerById(id, userId);
+        log.info("Retrieved customer ID: {} for user ID: {}", id, userId);
         return ResponseEntity.ok(customer);
     }
 
@@ -54,7 +60,9 @@ public class CustomerController {
             @Valid @RequestBody CustomerDTO customerDTO,
             Authentication authentication) {
         Long userId = extractUserId(authentication);
+        log.info("Creating new customer: {} for shop ID: {} by user ID: {}", customerDTO.getName(), customerDTO.getShopId(), userId);
         CustomerDTO createdCustomer = customerService.createCustomer(customerDTO, userId);
+        log.info("Customer created successfully with ID: {} by user ID: {}", createdCustomer.getId(), userId);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdCustomer);
     }
 
@@ -67,7 +75,9 @@ public class CustomerController {
             @Valid @RequestBody CustomerDTO customerDTO,
             Authentication authentication) {
         Long userId = extractUserId(authentication);
+        log.info("Updating customer ID: {} by user ID: {}", id, userId);
         CustomerDTO updatedCustomer = customerService.updateCustomer(id, customerDTO, userId);
+        log.info("Customer ID: {} updated successfully by user ID: {}", id, userId);
         return ResponseEntity.ok(updatedCustomer);
     }
 
@@ -80,7 +90,9 @@ public class CustomerController {
             @PathVariable Long shopId,
             Authentication authentication) {
         Long userId = extractUserId(authentication);
+        log.debug("Fetching customers for shop ID: {} by user ID: {}", shopId, userId);
         List<CustomerDTO> customers = customerService.getCustomersByShop(shopId, userId);
+        log.info("Retrieved {} customers for shop ID: {}", customers.size(), shopId);
         return ResponseEntity.ok(customers);
     }
 
@@ -92,7 +104,9 @@ public class CustomerController {
             @PathVariable Long shopId,
             Authentication authentication) {
         Long userId = extractUserId(authentication);
+        log.debug("Fetching active customers for shop ID: {} by user ID: {}", shopId, userId);
         List<CustomerDTO> customers = customerService.getActiveCustomersByShop(shopId, userId);
+        log.info("Retrieved {} active customers for shop ID: {}", customers.size(), shopId);
         return ResponseEntity.ok(customers);
     }
 
@@ -101,6 +115,7 @@ public class CustomerController {
      */
     private Long extractUserId(Authentication authentication) {
         if (authentication == null || !authentication.isAuthenticated()) {
+            log.warn("Unauthorized access attempt");
             throw new ApplicationException("User not authenticated", "UNAUTHORIZED");
         }
 

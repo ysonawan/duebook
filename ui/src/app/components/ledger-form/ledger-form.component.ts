@@ -18,10 +18,11 @@ export class LedgerFormComponent implements OnInit {
   ledgerEntry: CustomerLedger = {
     customerId: 0,
     shopId: 0,
-    entryType: LedgerEntryType.JAMA,
+    entryType: LedgerEntryType.BAKI,
     amount: 0,
     balanceAfter: 0,
-    entryDate: new Date().toISOString().split('T')[0],
+    entryDate: new Date(),
+    createdAt: new Date(),
     notes: ''
   };
 
@@ -92,7 +93,7 @@ export class LedgerFormComponent implements OnInit {
     this.currentBalance = 0;
     this.ledgerEntry.balanceAfter = 0;
     this.ledgerEntry.amount = 0;
-    this.ledgerEntry.entryType = LedgerEntryType.JAMA;
+    this.ledgerEntry.entryType = LedgerEntryType.BAKI;
   }
 
   onCustomerChange(): void {
@@ -112,8 +113,8 @@ export class LedgerFormComponent implements OnInit {
     const currentBalance = this.selectedCustomer.currentBalance || 0;
     const amount = this.ledgerEntry.amount || 0;
 
-    if (this.ledgerEntry.entryType === LedgerEntryType.JAMA) {
-      // JAMA increases balance
+    if (this.ledgerEntry.entryType === LedgerEntryType.BAKI) {
+      // BAKI increases balance
       this.ledgerEntry.balanceAfter = currentBalance + amount;
     } else if (this.ledgerEntry.entryType === LedgerEntryType.PAID) {
       // PAID decreases balance
@@ -149,7 +150,7 @@ export class LedgerFormComponent implements OnInit {
   }
 
   getEntryTypeLabel(type: string): string {
-    if (type === LedgerEntryType.JAMA) return 'Jama (Debit/Increase Balance)';
+    if (type === LedgerEntryType.BAKI) return 'Baki (Debit/Increase Balance)';
     if (type === LedgerEntryType.PAID) return 'Paid (Credit/Decrease Balance)';
     if (type === LedgerEntryType.REVERSAL) return 'Reversal (Undo Entry)';
     return type;

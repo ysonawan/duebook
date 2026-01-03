@@ -64,13 +64,21 @@
             </button>
 
             <!-- Dropdown Menu -->
+
             <div *ngIf="userMenuOpen" class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
-              <a routerLink="/profile"
+                <a routerLink="/audit-logs"
+                   (click)="closeUserMenu()"
+                   class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-2">
+                    <i class="fas fa-history"></i>
+                    Audit Logs
+                </a>
+                <a routerLink="/profile"
                  (click)="closeUserMenu()"
                  class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-2">
                 <i class="fas fa-user"></i>
                 My Profile
               </a>
+
               <div class="border-t border-gray-200 my-1"></div>
               <button
                 (click)="logout()"
@@ -109,7 +117,13 @@
 
           <!-- Dropdown Menu -->
           <div *ngIf="userMenuOpen" class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
-            <a routerLink="/profile"
+              <a routerLink="/audit-logs"
+                 (click)="closeUserMenu()"
+                 class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-2">
+                  <i class="fas fa-history"></i>
+                  Audit Logs
+              </a>
+              <a routerLink="/profile"
                (click)="closeUserMenu()"
                class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-2">
               <i class="fas fa-user"></i>
@@ -139,26 +153,26 @@
           <i class="fas fa-home text-lg"></i>
           <span class="text-xs mt-0.5">Dashboard</span>
         </a>
-        <a routerLink="/assets"
+        <a routerLink="/customers"
            routerLinkActive="bg-indigo-100 text-indigo-700"
            [routerLinkActiveOptions]="{exact: false}"
            class="flex flex-col items-center justify-center px-2 py-1 rounded-lg text-gray-600 hover:bg-gray-100 hover:text-indigo-600 transition-all duration-200 flex-1">
-          <i class="fas fa-chart-line text-lg"></i>
-          <span class="text-xs mt-0.5">Assets</span>
+          <i class="fas fa-users text-lg"></i>
+          <span class="text-xs mt-0.5">Customers</span>
         </a>
-        <a routerLink="/liabilities"
+        <a routerLink="/suppliers"
            routerLinkActive="bg-indigo-100 text-indigo-700"
            [routerLinkActiveOptions]="{exact: false}"
            class="flex flex-col items-center justify-center px-2 py-1 rounded-lg text-gray-600 hover:bg-gray-100 hover:text-indigo-600 transition-all duration-200 flex-1">
-          <i class="fas fa-file-invoice text-lg"></i>
-          <span class="text-xs  mt-0.5">Liabilities</span>
+          <i class="fas fa-comments text-lg"></i>
+          <span class="text-xs mt-0.5">Suppliers</span>
         </a>
-        <a routerLink="/budget"
+        <a routerLink="/ledger"
            routerLinkActive="bg-indigo-100 text-indigo-700"
            [routerLinkActiveOptions]="{exact: false}"
            class="flex flex-col items-center justify-center px-2 py-1 rounded-lg text-gray-600 hover:bg-gray-100 hover:text-indigo-600 transition-all duration-200 flex-1">
-          <i class="fas fa-wallet text-lg"></i>
-          <span class="text-xs mt-0.5">Budget</span>
+          <i class="fas fa-coins text-lg"></i>
+          <span class="text-xs mt-0.5">Ledger</span>
         </a>
         <a routerLink="/shops"
            routerLinkActive="bg-indigo-100 text-indigo-700"
@@ -180,9 +194,8 @@
   <footer class="bg-gray-700 text-white py-6 mt-auto mb-16 md:mb-0" *ngIf="authService.isAuthenticated()">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="text-center">
-        <p class="text-sm text-gray-300">© 2026 Duebook. Track all your investments in one place.</p>
+        <p class="text-sm text-gray-300">© 2026 Duebook. Track customer dues, payments, and balances digitally.</p>
       </div>
     </div>
   </footer>
 </div>
-

@@ -4,17 +4,15 @@ import com.duebook.app.dto.CustomerLedgerDTO;
 import com.duebook.app.dto.CustomerDTO;
 import com.duebook.app.dto.UserDTO;
 import com.duebook.app.exception.ApplicationException;
-import com.duebook.app.model.Customer;
-import com.duebook.app.model.CustomerLedger;
-import com.duebook.app.model.Shop;
-import com.duebook.app.model.User;
-import com.duebook.app.model.ShopUser;
+import com.duebook.app.model.*;
 import com.duebook.app.repository.CustomerLedgerRepository;
 import com.duebook.app.repository.CustomerRepository;
 import com.duebook.app.repository.ShopRepository;
 import com.duebook.app.repository.UserRepository;
 import com.duebook.app.repository.ShopUserRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +23,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class CustomerLedgerService {
 
     private final CustomerLedgerRepository ledgerRepository;
@@ -32,6 +31,8 @@ public class CustomerLedgerService {
     private final ShopRepository shopRepository;
     private final UserRepository userRepository;
     private final ShopUserRepository shopUserRepository;
+    private final AuditService auditService;
+    private final ObjectMapper objectMapper;
 
     /**
      * Get all ledger entries for the authenticated user
@@ -88,6 +89,15 @@ public class CustomerLedgerService {
         updateCustomerBalance(customer, ledger);
 
         CustomerLedger savedLedger = ledgerRepository.save(ledger);
+
+        // Audit log: Ledger entry created
+        try {
+            String newValue = objectMapper.writeValueAsString(convertToDTO(savedLedger));
+            auditService.logAuditLongId(shop.getId(), AuditAction.LEDGER.name(), savedLedger.getId(), AuditAction.LEDGER_ENTRY_CREATED, userId, null, newValue);
+        } catch (Exception e) {
+            log.error("Error logging audit for ledger entry creation", e);
+        }
+
         return convertToDTO(savedLedger);
     }
 
@@ -125,8 +135,8 @@ public class CustomerLedgerService {
         Customer customer = originalEntry.getCustomer();
         Double newBalance = customer.getCurrentBalance();
 
-        if (originalEntry.getEntryType() == CustomerLedger.LedgerEntryType.JAMA) {
-            // Reverse JAMA (decrease balance)
+        if (originalEntry.getEntryType() == CustomerLedger.LedgerEntryType.BAKI) {
+            // Reverse BAKI (decrease balance)
             newBalance = newBalance - originalEntry.getAmount();
         } else if (originalEntry.getEntryType() == CustomerLedger.LedgerEntryType.PAID) {
             // Reverse PAID (increase balance)
@@ -135,9 +145,18 @@ public class CustomerLedgerService {
 
         reversalEntry.setBalanceAfter(newBalance);
         customer.setCurrentBalance(newBalance);
-
+        customer.setUpdatedAt(LocalDateTime.now());
         customerRepository.save(customer);
         CustomerLedger savedReversal = ledgerRepository.save(reversalEntry);
+
+        // Audit log: Ledger reversal
+        try {
+            String oldValue = objectMapper.writeValueAsString(convertToDTO(originalEntry));
+            String newValue = objectMapper.writeValueAsString(convertToDTO(savedReversal));
+            auditService.logAuditLongId(originalEntry.getShop().getId(), AuditAction.LEDGER.name(), savedReversal.getId(), AuditAction.LEDGER_REVERSAL, userId, oldValue, newValue);
+        } catch (Exception e) {
+            log.error("Error logging audit for ledger reversal", e);
+        }
 
         return convertToDTO(savedReversal);
     }
@@ -186,12 +205,14 @@ public class CustomerLedgerService {
 
     /**
      * Update customer's current balance based on ledger entry
+     * Tracks balance adjustments for audit purposes
      */
     private void updateCustomerBalance(Customer customer, CustomerLedger ledger) {
-        Double currentBalance = customer.getCurrentBalance();
+        Double oldBalance = customer.getCurrentBalance();
+        Double currentBalance = oldBalance;
 
-        if (ledger.getEntryType() == CustomerLedger.LedgerEntryType.JAMA) {
-            // JAMA increases balance (customer owes more)
+        if (ledger.getEntryType() == CustomerLedger.LedgerEntryType.BAKI) {
+            // BAKI increases balance (customer owes more)
             currentBalance = currentBalance + ledger.getAmount();
         } else if (ledger.getEntryType() == CustomerLedger.LedgerEntryType.PAID) {
             // PAID decreases balance (customer pays back)
@@ -200,7 +221,25 @@ public class CustomerLedgerService {
 
         ledger.setBalanceAfter(currentBalance);
         customer.setCurrentBalance(currentBalance);
+        customer.setUpdatedAt(LocalDateTime.now());
         customerRepository.save(customer);
+
+        // Audit log: Customer balance adjusted
+        try {
+            log.debug("Customer ID: {} balance updated from {} to {} (Entry Type: {})",
+                customer.getId(), oldBalance, currentBalance, ledger.getEntryType());
+            auditService.logAuditLongId(
+                customer.getShop().getId(),
+                AuditAction.CUSTOMER.name(),
+                customer.getId(),
+                AuditAction.LEDGER_BALANCE_ADJUSTED,
+                ledger.getCreatedByUser().getId(),
+                String.format("{\"balance\": %.2f}", oldBalance),
+                String.format("{\"balance\": %.2f, \"amount\": %.2f, \"type\": \"%s\"}", currentBalance, ledger.getAmount(), ledger.getEntryType())
+            );
+        } catch (Exception e) {
+            log.error("Error logging audit for balance adjustment", e);
+        }
     }
 
     /**

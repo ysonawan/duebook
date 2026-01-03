@@ -29,7 +29,6 @@ CREATE TABLE IF NOT EXISTS duebook_schema.users (
     phone VARCHAR(15) UNIQUE NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
-    secondary_emails TEXT,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX idx_users_phone ON duebook_schema.users(phone);
@@ -63,6 +62,7 @@ CREATE TABLE duebook_schema.customers (
     id BIGSERIAL PRIMARY KEY,
     shop_id BIGINT NOT NULL REFERENCES duebook_schema.shops(id),
     name VARCHAR(150) NOT NULL,
+    entity_name VARCHAR(255),
     phone VARCHAR(15) NOT NULL,
     opening_balance NUMERIC(12,2) NOT NULL DEFAULT 0,
     current_balance NUMERIC(12,2) NOT NULL DEFAULT 0,

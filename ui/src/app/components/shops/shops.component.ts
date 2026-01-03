@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { ShopService } from '../../services/shop.service';
 import { Shop } from '../../models/shop.model';
 import Swal from 'sweetalert2';
+import {TimezoneService} from "../../services/timezone.service";
 
 @Component({
     selector: 'app-shops',
@@ -23,7 +24,8 @@ export class ShopsComponent implements OnInit {
 
     constructor(
         private shopService: ShopService,
-        private router: Router
+        private router: Router,
+        private timezoneService: TimezoneService
     ) {}
 
     ngOnInit(): void {
@@ -111,9 +113,8 @@ export class ShopsComponent implements OnInit {
         this.router.navigate(['/shops/new']);
     }
 
-    formatDate(date: string | undefined): string {
-        if (!date) return 'N/A';
-        return new Date(date).toLocaleDateString();
+    formatDate(date: Date): string {
+        return this.timezoneService.formatDateInIndiaTimezone(date, {});
     }
 }
 

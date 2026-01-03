@@ -1,5 +1,5 @@
 export enum LedgerEntryType {
-  JAMA = 'JAMA',
+  BAKI = 'BAKI',
   PAID = 'PAID',
   REVERSAL = 'REVERSAL'
 }
@@ -13,8 +13,8 @@ export interface CustomerLedger {
   balanceAfter: number;
   referenceEntryId?: number;
   notes?: string;
-  entryDate: string;
-  createdAt?: string;
+  entryDate: Date;
+  createdAt: Date;
   createdByUser?: {
     id: number;
     name: string;

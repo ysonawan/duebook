@@ -20,6 +20,9 @@ public class CustomerDTO {
     @Size(min = 2, max = 100, message = "Customer name must be between 2 and 100 characters")
     private String name;
 
+    @Size(min = 2, max = 255, message = "Entity name must be between 2 and 255 characters")
+    private String entityName;
+
     @NotBlank(message = "Phone number is required")
     @Size(min = 10, max = 10, message = "Phone number must be 10 digits")
     private String phone;

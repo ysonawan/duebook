@@ -1,1 +1,358 @@
-<p>suppliers works!</p>
+<div class="bg-gradient-to-br from-slate-50 to-slate-100">
+    <div class="p-4">
+        <div class="max-w-7xl mx-auto space-y-6">
+
+            <!-- Header -->
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+                <div>
+                    <h1 class="text-xl md:text-2xl font-bold text-gray-700 mb-2">Suppliers</h1>
+                    <p class="text-gray-600 text-sm">Create and manage your suppliers</p>
+                </div>
+                <button
+                        class="px-6 py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+                        (click)="addNewCustomer()">
+                    <i class="fas fa-plus"></i>
+                    Add New Supplier
+                </button>
+            </div>
+            <!-- Info Card -->
+            <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div class="flex gap-3">
+                    <i class="fas fa-info-circle text-xl text-blue-600 flex-shrink-0 mt-0.5"></i>
+                    <div>
+                        <h3 class="font-semibold text-blue-900 mb-1">Info</h3>
+                        <p class="text-sm text-blue-800">
+                           This screen is work in progress.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- Status Filter -->
+                    <div class="space-y-2">
+                        <label class="block text-sm font-semibold text-gray-700">Filter by Status</label>
+                        <select
+                                [(ngModel)]="filterStatus"
+                                (change)="onFilterChange()"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors text-sm">
+                            <option value="ALL" selected>All Suppliers</option>
+                            <option value="ACTIVE">Active Only</option>
+                            <option value="INACTIVE">Inactive Only</option>
+                        </select>
+                    </div>
+
+                    <!-- Shop Filter -->
+                    <div class="space-y-2">
+                        <label class="block text-sm font-semibold text-gray-700">Filter by Shop</label>
+                        <select
+                                [(ngModel)]="filterShop"
+                                (change)="onFilterChange()"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors text-sm">
+                            <option value="">All Shops</option>
+                            <option *ngFor="let shop of shops" [value]="shop.id">{{ shop.name }}</option>
+                        </select>
+                    </div>
+
+                    <!-- Search -->
+                    <div class="space-y-2">
+                        <label class="block text-sm font-semibold text-gray-700">Search</label>
+                        <div class="relative">
+                            <input
+                                    type="text"
+                                    [(ngModel)]="searchTerm"
+                                    (input)="onSearchChange()"
+                                    placeholder="Search by name or phone..."
+                                    class="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors text-sm">
+                            <i class="fas fa-search text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Summary Cards -->
+            <div *ngIf="!loading && filteredCustomers.length > 0" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <!-- Total Customers Card -->
+                <div class="bg-white rounded-lg shadow-md p-4 border-l-4 border-blue-500">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Total Suppliers</p>
+                            <p class="text-2xl font-bold text-gray-700 mt-1">{{ totalCustomers }}</p>
+                        </div>
+                        <div class="bg-blue-100 p-3 rounded-lg">
+                            <i class="fas fa-users text-2xl text-blue-600"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Active Customers Card -->
+                <div class="bg-white rounded-lg shadow-md p-4 border-l-4 border-emerald-500">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Active Suppliers</p>
+                            <p class="text-2xl font-bold text-emerald-600 mt-1">{{ activeCustomers }}</p>
+                        </div>
+                        <div class="bg-emerald-100 p-3 rounded-lg">
+                            <i class="fas fa-check-circle text-2xl text-emerald-600"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Total Opening Balance Card -->
+                <div class="bg-white rounded-lg shadow-md p-4 border-l-4 border-purple-500">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Opening Balance</p>
+                            <p class="text-2xl font-bold text-purple-600 mt-1">{{ formatCurrency(totalOpeningBalance) }}</p>
+                        </div>
+                        <div class="bg-purple-100 p-3 rounded-lg">
+                            <i class="fas fa-money-bill-wave text-2xl text-purple-600"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Total Current Balance Card -->
+                <div class="bg-white rounded-lg shadow-md p-4 border-l-4 border-orange-500">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Current Balance</p>
+                            <p class="text-2xl font-bold text-orange-600 mt-1">{{ formatCurrency(totalCurrentBalance) }}</p>
+                        </div>
+                        <div class="bg-orange-100 p-3 rounded-lg">
+                            <i class="fas fa-wallet text-2xl text-orange-600"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loading State -->
+            <div *ngIf="loading" class="flex items-center justify-center py-20">
+                <div class="text-center">
+                    <i class="fas fa-spinner fa-spin text-indigo-600 text-4xl mb-4"></i>
+                    <p class="mt-4 text-lg text-gray-600 font-medium">Loading suppliers...</p>
+                </div>
+            </div>
+
+            <!-- No Customers State -->
+            <div *ngIf="!loading && filteredCustomers.length === 0" class="bg-white rounded-xl shadow-md p-12">
+                <div class="text-center">
+                    <i class="fas fa-users text-6xl text-gray-300 mb-4"></i>
+                    <h3 class="text-xl font-semibold text-gray-700 mb-2">No suppliers found</h3>
+                    <p class="text-gray-500 mb-6">Start by creating your first supplier to organize your business.</p>
+                    <button
+                            class="px-6 py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors"
+                            (click)="addNewCustomer()">
+                        Create Your First Supplier
+                    </button>
+                </div>
+            </div>
+
+            <!-- Suppliers List - Desktop Table View -->
+            <div *ngIf="!loading && filteredCustomers.length > 0" class="hidden md:block bg-white rounded-xl shadow-md overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-50 border-b border-gray-200">
+                        <tr>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Name</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Phone</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Shop</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Opening Balance</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Current Balance</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Created Date</th>
+                            <th class="px-6 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
+                        </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                        <tr *ngFor="let customer of filteredCustomers"
+                            class="hover:bg-gray-50 transition-colors"
+                            [ngClass]="{'opacity-60 bg-gray-50': !customer.isActive}">
+                            <td class="px-6 py-4">
+                                <div class="text-sm font-semibold" [ngClass]="!customer.isActive ? 'text-gray-500' : 'text-gray-700'">
+                                    {{ customer.name }}
+                                </div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="text-sm" [ngClass]="!customer.isActive ? 'text-gray-400' : 'text-gray-600'">
+                                    {{ customer.phone }}
+                                </div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="text-sm" [ngClass]="!customer.isActive ? 'text-gray-400' : 'text-gray-600'">
+                                    {{ getShopName(customer.shopId) }}
+                                </div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="text-sm" [ngClass]="!customer.isActive ? 'text-gray-400' : 'text-gray-600'">
+                                    {{ formatCurrency(customer.openingBalance) }}
+                                </div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="text-sm font-semibold" [ngClass]="!customer.isActive ? 'text-gray-400' : (customer.currentBalance && customer.currentBalance > 0 ? 'text-red-600' : 'text-emerald-600')">
+                                    {{ formatCurrency(customer.currentBalance) }}
+                                </div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium"
+                                      [ngClass]="customer.isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-200 text-gray-600'">
+                                    {{ customer.isActive ? 'Active' : 'Inactive' }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="text-sm" [ngClass]="!customer.isActive ? 'text-gray-400' : 'text-gray-600'">
+                                    {{ formatDate(customer.createdAt) }}
+                                </div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="flex items-center justify-center gap-2">
+                                    <button
+                                            (click)="editCustomer(customer)"
+                                            class="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                                            title="Edit">
+                                        <i class="fas fa-edit text-lg"></i>
+                                    </button>
+                                    <button
+                                            (click)="toggleCustomerStatus(customer)"
+                                            class="p-2 transition-colors"
+                                            [ngClass]="customer.isActive ? 'text-red-600 hover:bg-red-50' : 'text-emerald-600 hover:bg-emerald-50'"
+                                            [title]="customer.isActive ? 'Deactivate' : 'Activate'">
+                                        <i *ngIf="customer.isActive" class="fas fa-eye-slash text-lg"></i>
+                                        <i *ngIf="!customer.isActive" class="fas fa-eye text-lg"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Suppliers List - Mobile Card View -->
+            <div *ngIf="!loading && filteredCustomers.length > 0" class="md:hidden space-y-4">
+                <div *ngFor="let customer of filteredCustomers"
+                     class="bg-white rounded-xl shadow-md p-4 hover:shadow-lg transition-shadow"
+                     [ngClass]="{'opacity-60 bg-gray-50': !customer.isActive}">
+                    <!-- Header Row -->
+                    <div class="flex items-start justify-between mb-3">
+                        <div class="flex-1">
+                            <h3 class="text-lg font-bold mb-1" [ngClass]="!customer.isActive ? 'text-gray-500' : 'text-gray-700'">
+                                {{ customer.name }}
+                            </h3>
+                            <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium"
+                                  [ngClass]="customer.isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-200 text-gray-600'">
+                                {{ customer.isActive ? 'Active' : 'Inactive' }}
+                            </span>
+                        </div>
+                        <div class="flex gap-2 ml-2">
+                            <button
+                                    (click)="editCustomer(customer)"
+                                    class="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
+                                <i class="fas fa-edit text-lg"></i>
+                            </button>
+                            <button
+                                    (click)="toggleCustomerStatus(customer)"
+                                    class="p-2 transition-colors"
+                                    [ngClass]="customer.isActive ? 'text-red-600 hover:bg-red-50' : 'text-emerald-600 hover:bg-emerald-50'"
+                                    [title]="customer.isActive ? 'Deactivate' : 'Activate'">
+                                <i *ngIf="customer.isActive" class="fas fa-eye-slash text-lg"></i>
+                                <i *ngIf="!customer.isActive" class="fas fa-eye text-lg"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Details Grid -->
+                    <div class="space-y-3">
+                        <!-- Phone -->
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="text-gray-600">Phone:</span>
+                            <span class="font-semibold" [ngClass]="!customer.isActive ? 'text-gray-400' : 'text-gray-700'">
+                                {{ customer.phone }}
+                            </span>
+                        </div>
+
+                        <!-- Shop -->
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="text-gray-600">Shop:</span>
+                            <span class="font-semibold" [ngClass]="!customer.isActive ? 'text-gray-400' : 'text-gray-700'">
+                                {{ getShopName(customer.shopId) }}
+                            </span>
+                        </div>
+
+                        <!-- Opening Balance -->
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="text-gray-600">Opening Balance:</span>
+                            <span class="font-semibold" [ngClass]="!customer.isActive ? 'text-gray-400' : 'text-gray-700'">
+                                {{ formatCurrency(customer.openingBalance) }}
+                            </span>
+                        </div>
+
+                        <!-- Current Balance -->
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="text-gray-600">Current Balance:</span>
+                            <span class="font-semibold" [ngClass]="!customer.isActive ? 'text-gray-400' : (customer.currentBalance && customer.currentBalance > 0 ? 'text-red-600' : 'text-emerald-600')">
+                                {{ formatCurrency(customer.currentBalance) }}
+                            </span>
+                        </div>
+
+                        <!-- Created Date -->
+                        <div class="flex items-center justify-between text-sm">
+                            <span class="text-gray-600">Created:</span>
+                            <span class="text-xs" [ngClass]="!customer.isActive ? 'text-gray-400' : 'text-gray-600'">
+                                {{ formatDate(customer.createdAt) }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Section -->
+            <div *ngIf="!loading && filteredCustomers.length > 0" class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 lg:gap-6">
+
+                <!-- Balance Distribution Chart -->
+                <div class="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300 p-4 sm:p-4">
+                    <div class="flex items-center justify-between mb-5 pb-4 border-b border-gray-100">
+                        <div>
+                            <h2 class="text-lg sm:text-xl font-bold text-gray-700 mb-1">Top Suppliers by Balance</h2>
+                            <p class="text-xs sm:text-sm text-gray-500">Top 10 suppliers by outstanding balance</p>
+                        </div>
+                        <div class="p-2.5 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-lg">
+                            <i class="fas fa-pie-chart text-indigo-600 text-xl"></i>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-center h-[280px] sm:h-[280px]">
+                        <div *ngIf="hasBalanceChartData && filteredCustomers.length > 0" echarts [options]="balanceDistributionChartOptions" class="w-full h-full"></div>
+                        <div *ngIf="!hasBalanceChartData || filteredCustomers.length === 0" class="text-center">
+                            <i class="fas fa-pie-chart text-gray-300 text-5xl mx-auto mb-3 block"></i>
+                            <p class="text-gray-500 text-sm">No balance data available</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Customers by Shop Chart -->
+                <div class="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300 p-4 sm:p-4">
+                    <div class="flex items-center justify-between mb-5 pb-4 border-b border-gray-100">
+                        <div>
+                            <h2 class="text-lg sm:text-xl font-bold text-gray-700 mb-1">Suppliers by Shop</h2>
+                            <p class="text-xs sm:text-sm text-gray-500">Distribution of suppliers across shops</p>
+                        </div>
+                        <div class="p-2.5 bg-gradient-to-br from-green-100 to-emerald-100 rounded-lg">
+                            <i class="fas fa-building text-green-600 text-xl"></i>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-center h-[280px] sm:h-[280px]">
+                        <div *ngIf="hasShopChartData && filteredCustomers.length > 0" echarts [options]="customersByShopChartOptions" class="w-full h-full"></div>
+                        <div *ngIf="!hasShopChartData || filteredCustomers.length === 0" class="text-center">
+                            <i class="fas fa-building text-gray-300 text-5xl mx-auto mb-3 block"></i>
+                            <p class="text-gray-500 text-sm">No shop data available</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+        </div>
+    </div>
+</div>
+

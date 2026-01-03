@@ -3,7 +3,7 @@ import { UserService } from '../../services/user.service';
 import { AuthService } from '../../services/auth.service';
 import { UserProfile } from '../../models/user.model';
 import { Router } from '@angular/router';
-import { ToastrService } from 'ngx-toastr';
+import {NotificationService} from "../../services/notification.service";
 
 @Component({
     selector: 'app-profile',
@@ -13,7 +13,6 @@ import { ToastrService } from 'ngx-toastr';
 })
 export class ProfileComponent implements OnInit {
   profile: UserProfile | null = null;
-  newSecondaryEmail: string = '';
   loading = false;
   saving = false;
   sendingReport = false;
@@ -21,7 +20,8 @@ export class ProfileComponent implements OnInit {
   editingBasic = false;
   basicForm = {
     name: '',
-    email: ''
+    email: '',
+    phone: ''
   };
 
   // OTP Modal state
@@ -32,18 +32,27 @@ export class ProfileComponent implements OnInit {
   otpSent = false;
   otpVerificationInProgress = false;
   newPrimaryEmail = '';
-  pendingSecondaryEmail: string = '';
+  previousEmail = '';
 
   constructor(
     private userService: UserService,
     private authService: AuthService,
     private router: Router,
-    private toastr: ToastrService
+    private notification: NotificationService
   ) {}
 
   ngOnInit(): void {
     this.loadProfile();
   }
+
+  showMessage(type: 'success' | 'error', text: string): void {
+    if (type === 'success') {
+      this.notification.success(text, 'Success');
+    } else {
+      this.notification.error(text, 'Error');
+    }
+  }
+
 
   loadProfile(): void {
     this.loading = true;
@@ -60,114 +69,6 @@ export class ProfileComponent implements OnInit {
     });
   }
 
-
-  addSingleSecondaryEmail(): void {
-    const email = this.newSecondaryEmail.trim();
-
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      this.showMessage('error', 'Invalid email format');
-      return;
-    }
-
-    // Check if email is same as primary
-    if (this.profile && email.toLowerCase() === this.profile.email.toLowerCase()) {
-      this.showMessage('error', 'Secondary email cannot be the same as primary email');
-      return;
-    }
-
-    // Check if email already exists in secondary emails
-    if (this.profile && this.profile.secondaryEmails &&
-        this.profile.secondaryEmails.some(e => e.toLowerCase() === email.toLowerCase())) {
-      this.showMessage('error', 'This email is already added');
-      return;
-    }
-
-    // Store pending email and show OTP modal
-    this.pendingSecondaryEmail = email;
-    this.otpModalType = 'secondary';
-    this.showOtpModal = true;
-    this.otpCode = '';
-    this.otpSent = false;
-    this.requestOtpForSecondaryEmails();
-  }
-
-  removeSecondaryEmail(index: number): void {
-    if (!this.profile) return;
-
-    const updatedEmails = this.profile.secondaryEmails.filter((_, i) => i !== index);
-
-    this.saving = true;
-    this.userService.updateSecondaryEmailsWithOtp({
-      secondaryEmails: updatedEmails,
-      otp: '' // No OTP needed for removal
-    }).subscribe({
-      next: (updatedProfile) => {
-        this.profile = updatedProfile;
-        this.saving = false;
-        this.showMessage('success', `Email removed successfully`);
-      },
-      error: (error) => {
-        this.saving = false;
-        this.showMessage('error', error?.error?.message || 'Failed to remove email');
-      }
-    });
-  }
-
-  requestOtpForSecondaryEmails(): void {
-    this.otpLoading = true;
-    this.userService.requestOtpForSecondaryEmailChange([this.pendingSecondaryEmail]).subscribe({
-      next: (message) => {
-        this.otpLoading = false;
-        this.otpSent = true;
-        this.showMessage('success', message || 'OTP sent to your newly added email');
-      },
-      error: (error) => {
-        this.otpLoading = false;
-        this.showMessage('error', error?.error?.message || 'Failed to send OTP');
-        this.closeOtpModal();
-      }
-    });
-  }
-
-  verifyOtpForSecondaryEmails(): void {
-    if (!this.otpCode || this.otpCode.trim().length === 0) {
-      this.showMessage('error', 'Please enter the OTP');
-      return;
-    }
-
-    // Build the complete secondary emails list with the new email
-    const updatedEmails = this.profile?.secondaryEmails ? [...this.profile.secondaryEmails] : [];
-    updatedEmails.push(this.pendingSecondaryEmail);
-
-    this.otpVerificationInProgress = true;
-    this.userService.updateSecondaryEmailsWithOtp({
-      secondaryEmails: updatedEmails,
-      otp: this.otpCode.trim()
-    }).subscribe({
-      next: (updatedProfile) => {
-        this.profile = updatedProfile;
-        this.otpVerificationInProgress = false;
-        this.closeOtpModal();
-        this.newSecondaryEmail = '';
-        this.showMessage('success', 'Secondary email added successfully');
-      },
-      error: (error) => {
-        this.otpVerificationInProgress = false;
-        this.showMessage('error', error?.error?.message || 'OTP verification failed. Please try again.');
-      }
-    });
-  }
-
-  showMessage(type: 'success' | 'error', text: string): void {
-    if (type === 'success') {
-      this.toastr.success(text);
-    } else {
-      this.toastr.error(text);
-    }
-  }
-
   sendReport(): void {
     this.sendingReport = true;
     this.userService.sendPortfolioReport().subscribe({
@@ -178,7 +79,6 @@ export class ProfileComponent implements OnInit {
       error: (error) => {
         console.error('Error sending report:', error);
         this.sendingReport = false;
-        this.showMessage('error', error?.error?.message || 'Failed to send portfolio report. Please try again.');
       }
     });
   }
@@ -193,7 +93,6 @@ export class ProfileComponent implements OnInit {
       error: (error) => {
         console.error('Error sending budget report:', error);
         this.sendingBudgetReport = false;
-        this.showMessage('error', error?.error?.message || 'Failed to send budget report. Please try again.');
       }
     });
   }
@@ -202,15 +101,30 @@ export class ProfileComponent implements OnInit {
   startEditBasic() {
     if (this.profile) {
       this.basicForm.name = this.profile.name;
-      this.basicForm.email = this.profile.email;
+      this.basicForm.email = this.profile.email || '';
+      this.basicForm.phone = this.profile.phone || '';
+      this.previousEmail = this.profile.email || '';
       this.editingBasic = true;
     }
   }
 
   saveBasicInfo() {
-    // Check if email has changed
-    if (this.basicForm.email !== this.profile?.email) {
-      // Email is changing, need OTP verification
+    // Validate mandatory fields
+    if (!this.basicForm.phone || this.basicForm.phone.trim() === '') {
+      this.showMessage('error', 'Phone number (username) is required');
+      return;
+    }
+
+    if (!this.basicForm.name || this.basicForm.name.trim() === '') {
+      this.showMessage('error', 'Full name is required');
+      return;
+    }
+
+    // Check if email has changed (added or updated)
+    const emailHasChanged = this.basicForm.email !== this.previousEmail;
+
+    if (emailHasChanged && this.basicForm.email.trim() !== '') {
+      // Email is being added or changed, need OTP verification
       this.newPrimaryEmail = this.basicForm.email;
       this.otpModalType = 'primary';
       this.showOtpModal = true;
@@ -218,7 +132,7 @@ export class ProfileComponent implements OnInit {
       this.otpSent = false;
       this.requestOtpForPrimaryEmail();
     } else {
-      // Only name is changing, no OTP needed
+      // No email change or email removed, no OTP needed
       this.updateBasicInfoWithoutEmailChange();
     }
   }
@@ -231,9 +145,8 @@ export class ProfileComponent implements OnInit {
         this.otpSent = true;
         this.showMessage('success', message || 'OTP sent to your new email address');
       },
-      error: (error) => {
+      error: () => {
         this.otpLoading = false;
-        this.showMessage('error', error?.error?.message || 'Failed to send OTP to new email address');
         this.closeOtpModal();
       }
     });
@@ -249,6 +162,7 @@ export class ProfileComponent implements OnInit {
     this.userService.updateBasicInfoWithOtp({
       name: this.basicForm.name,
       email: this.newPrimaryEmail,
+      phone: this.basicForm.phone,
       otp: this.otpCode.trim()
     }).subscribe({
       next: (updated) => {
@@ -263,9 +177,8 @@ export class ProfileComponent implements OnInit {
           this.router.navigate(['/login']);
         }, 2000);
       },
-      error: (err) => {
+      error: () => {
         this.otpVerificationInProgress = false;
-        this.showMessage('error', err?.error?.message || 'OTP verification failed. Please try again.');
       }
     });
   }
@@ -274,7 +187,8 @@ export class ProfileComponent implements OnInit {
     this.saving = true;
     this.userService.updateBasicInfo({
       name: this.basicForm.name,
-      email: this.profile?.email || ''
+      email: this.basicForm.email || '',
+      phone: this.basicForm.phone
     }).subscribe({
       next: (updated) => {
         this.profile = updated;
@@ -282,9 +196,8 @@ export class ProfileComponent implements OnInit {
         this.saving = false;
         this.showMessage('success', 'Profile updated successfully');
       },
-      error: (err) => {
+      error: () => {
         this.saving = false;
-        this.showMessage('error', err?.error?.message || 'Failed to update profile');
       }
     });
   }
@@ -296,6 +209,5 @@ export class ProfileComponent implements OnInit {
     this.otpSent = false;
     this.otpVerificationInProgress = false;
     this.newPrimaryEmail = '';
-    this.pendingSecondaryEmail = '';
   }
 }

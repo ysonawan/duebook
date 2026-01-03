@@ -13,7 +13,10 @@ import Swal from 'sweetalert2';
 export class ShopFormComponent implements OnInit {
   shop: Shop = {
     name: '',
-    address: ''
+    address: '',
+    isActive: true,
+    createdAt: new Date(),
+    updatedAt: new Date()
   };
 
   isEditMode = false;

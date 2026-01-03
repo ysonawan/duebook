@@ -27,6 +27,7 @@ import {LedgerComponent} from "./components/ledger/ledger.component";
 import {LedgerFormComponent} from "./components/ledger-form/ledger-form.component";
 import {DashboardDuebookComponent} from "./components/dashboard/dashboard-duebook.component";
 import {SuppliersComponent} from "./components/suppliers/suppliers.component";
+import {AuditLogsComponent} from "./components/audit-logs/audit-logs.component";
 
 @NgModule({
     declarations: [
@@ -41,7 +42,8 @@ import {SuppliersComponent} from "./components/suppliers/suppliers.component";
         SuppliersComponent,
         LedgerComponent,
         LedgerFormComponent,
-        DashboardDuebookComponent
+        DashboardDuebookComponent,
+        AuditLogsComponent
     ],
     bootstrap: [AppComponent],
     imports: [

@@ -15,11 +15,14 @@ import Swal from 'sweetalert2';
 export class CustomerFormComponent implements OnInit {
   customer: Customer = {
     name: '',
+    entityName: '',
     phone: '',
     openingBalance: 0,
     currentBalance: 0,
     shopId: undefined,
-    isActive: true
+    isActive: true,
+    createdAt: new Date(),
+    updatedAt: new Date()
   };
 
   shops: Shop[] = [];
@@ -69,11 +72,6 @@ export class CustomerFormComponent implements OnInit {
   }
 
   onSubmit(): void {
-
-    // Set current balance if not set
-    if (!this.customer.currentBalance) {
-      this.customer.currentBalance = this.customer.openingBalance;
-    }
 
     this.loading = true;
 

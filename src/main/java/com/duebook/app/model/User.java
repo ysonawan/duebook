@@ -29,9 +29,6 @@ public class User {
     @Column(nullable = false)
     private String password;
 
-    @Column(name = "secondary_emails", columnDefinition = "TEXT")
-    private String secondaryEmails;
-
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

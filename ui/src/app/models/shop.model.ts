@@ -3,7 +3,7 @@ export interface Shop {
   name: string;
   address?: string;
   isActive?: boolean;
-  createdAt?: string;
-  updatedAt?: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 

@@ -58,7 +58,7 @@ public class CustomerLedger {
     }
 
     public enum LedgerEntryType {
-        JAMA, PAID, REVERSAL
+        BAKI, PAID, REVERSAL
     }
 }
 

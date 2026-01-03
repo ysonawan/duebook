@@ -26,7 +26,7 @@ public class CustomerLedgerDTO {
     private CustomerLedger.LedgerEntryType entryType;
 
     @NotNull(message = "Amount is required")
-    @Min(value = 0, message = "Amount cannot be negative")
+    @Min(value = 1, message = "Amount should be greater than 0")
     private Double amount;
 
     private Double balanceAfter;

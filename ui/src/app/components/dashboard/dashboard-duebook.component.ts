@@ -47,6 +47,10 @@ export class DashboardDuebookComponent implements OnInit {
   hasShopChartData = false;
   hasEntryTypeData = false;
 
+  // Top Customers
+  topCustomers: Customer[] = [];
+  maxTopCustomerBalance: number = 0;
+
   constructor(
     private customerService: CustomerService,
     private ledgerService: LedgerService,
@@ -66,11 +70,10 @@ export class DashboardDuebookComponent implements OnInit {
         this.customers = customers;
         this.calculateCustomerMetrics();
         this.prepareCustomerBalanceChart();
-        this.checkLoadingComplete();
+        this.prepareTopCustomers();
       },
       error: (err) => {
         console.error('Error loading customers:', err);
-        this.checkLoadingComplete();
       }
     });
 
@@ -80,11 +83,9 @@ export class DashboardDuebookComponent implements OnInit {
         this.calculateLedgerMetrics();
         this.prepareLedgerTrendChart();
         this.prepareEntryTypeChart();
-        this.checkLoadingComplete();
       },
       error: (err) => {
         console.error('Error loading ledger:', err);
-        this.checkLoadingComplete();
       }
     });
 
@@ -93,23 +94,13 @@ export class DashboardDuebookComponent implements OnInit {
         this.shops = shops.filter(s => s.isActive !== false);
         this.totalShops = this.shops.length;
         this.prepareShopDistributionChart();
-        this.checkLoadingComplete();
       },
       error: (err) => {
         console.error('Error loading shops:', err);
-        this.checkLoadingComplete();
       }
     });
+    this.loading = false;
   }
-
-  checkLoadingComplete(): void {
-    // Simple check - assume loading complete after short delay
-    // In production, use better state management
-    if (this.customers.length > 0 || this.ledgerEntries.length > 0 || this.shops.length > 0) {
-      this.loading = false;
-    }
-  }
-
   calculateCustomerMetrics(): void {
     this.totalCustomers = this.customers.length;
     this.activeCustomers = this.customers.filter(c => c.isActive !== false).length;
@@ -129,7 +120,7 @@ export class DashboardDuebookComponent implements OnInit {
     );
 
     this.totalDebit = effectiveEntries
-      .filter(e => e.entryType === LedgerEntryType.JAMA)
+      .filter(e => e.entryType === LedgerEntryType.BAKI)
       .reduce((sum, e) => sum + e.amount, 0);
 
     this.totalCredit = effectiveEntries
@@ -223,7 +214,7 @@ export class DashboardDuebookComponent implements OnInit {
         dailyData.set(date, { debit: 0, credit: 0 });
       }
       const data = dailyData.get(date)!;
-      if (entry.entryType === LedgerEntryType.JAMA) {
+      if (entry.entryType === LedgerEntryType.BAKI) {
         data.debit += entry.amount;
       } else {
         data.credit += entry.amount;
@@ -248,7 +239,7 @@ export class DashboardDuebookComponent implements OnInit {
         }
       },
       legend: {
-        data: ['Debit (Jama)', 'Credit (Paid)'],
+        data: ['Debit (Baki)', 'Credit (Paid)'],
         textStyle: { fontSize: isMobile ? 10 : 11 }
       },
       grid: {
@@ -272,7 +263,7 @@ export class DashboardDuebookComponent implements OnInit {
       },
       series: [
         {
-          name: 'Debit (Jama)',
+          name: 'Debit (Baki)',
           data: debits,
           type: 'line',
           smooth: true,
@@ -364,11 +355,11 @@ export class DashboardDuebookComponent implements OnInit {
       !reversedEntryIds.includes(e.id!) && e.entryType !== LedgerEntryType.REVERSAL
     );
 
-    const debitCount = effectiveEntries.filter(e => e.entryType === LedgerEntryType.JAMA).length;
+    const debitCount = effectiveEntries.filter(e => e.entryType === LedgerEntryType.BAKI).length;
     const creditCount = effectiveEntries.filter(e => e.entryType === LedgerEntryType.PAID).length;
 
     const data = [
-      { name: 'Jama (Debit)', value: debitCount, itemStyle: { color: '#FF6B6B' } },
+      { name: 'Baki (Debit)', value: debitCount, itemStyle: { color: '#FF6B6B' } },
       { name: 'Paid (Credit)', value: creditCount, itemStyle: { color: '#51CF66' } }
     ].filter(d => d.value > 0);
 
@@ -410,6 +401,15 @@ export class DashboardDuebookComponent implements OnInit {
         }
       ]
     };
+  }
+
+  prepareTopCustomers(): void {
+    // Top 10 customers with highest positive balance (Baki)
+    const sorted = [...this.customers]
+      .filter(c => c.currentBalance && c.currentBalance > 0)
+      .sort((a, b) => (b.currentBalance || 0) - (a.currentBalance || 0));
+    this.topCustomers = sorted.slice(0, 10);
+    this.maxTopCustomerBalance = this.topCustomers.length > 0 ? this.topCustomers[0].currentBalance || 1 : 1;
   }
 
   getShopName(shopId: number | undefined): string {
@@ -458,4 +458,3 @@ export class DashboardDuebookComponent implements OnInit {
     this.router.navigate(['/shops']);
   }
 }
-

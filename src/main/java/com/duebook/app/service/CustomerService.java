@@ -1,18 +1,18 @@
 package com.duebook.app.service;
 
 import com.duebook.app.dto.CustomerDTO;
+import com.duebook.app.dto.CustomerLedgerDTO;
+import com.duebook.app.dto.UserDTO;
 import com.duebook.app.exception.ApplicationException;
-import com.duebook.app.model.Customer;
-import com.duebook.app.model.CustomerLedger;
-import com.duebook.app.model.Shop;
-import com.duebook.app.model.ShopUser;
-import com.duebook.app.model.User;
+import com.duebook.app.model.*;
 import com.duebook.app.repository.CustomerRepository;
 import com.duebook.app.repository.CustomerLedgerRepository;
 import com.duebook.app.repository.ShopRepository;
 import com.duebook.app.repository.ShopUserRepository;
 import com.duebook.app.repository.UserRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +23,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class CustomerService {
 
     private final CustomerRepository customerRepository;
@@ -30,6 +31,8 @@ public class CustomerService {
     private final ShopUserRepository shopUserRepository;
     private final UserRepository userRepository;
     private final CustomerLedgerRepository customerLedgerRepository;
+    private final AuditService auditService;
+    private final ObjectMapper objectMapper;
 
     /**
      * Get all customers for the authenticated user
@@ -72,16 +75,10 @@ public class CustomerService {
         Customer customer = new Customer();
         customer.setShop(shop);
         customer.setName(customerDTO.getName().trim());
+        customer.setEntityName(customerDTO.getEntityName().trim());
         customer.setPhone(customerDTO.getPhone().trim());
         customer.setOpeningBalance(customerDTO.getOpeningBalance());
-
-        // If current balance is not provided, set it to opening balance
-        if (customerDTO.getCurrentBalance() == null) {
-            customer.setCurrentBalance(customerDTO.getOpeningBalance());
-        } else {
-            customer.setCurrentBalance(customerDTO.getCurrentBalance());
-        }
-
+        customer.setCurrentBalance(customerDTO.getOpeningBalance());
         customer.setIsActive(true);
         customer.setCreatedAt(LocalDateTime.now());
         customer.setUpdatedAt(LocalDateTime.now());
@@ -91,6 +88,14 @@ public class CustomerService {
         // If opening balance is greater than 0, create a ledger entry
         if (customerDTO.getOpeningBalance() != null && customerDTO.getOpeningBalance() > 0) {
             createOpeningBalanceLedgerEntry(savedCustomer, userId);
+        }
+
+        // Audit log: Customer created
+        try {
+            String newValue = objectMapper.writeValueAsString(convertToDTO(savedCustomer));
+            auditService.logAuditLongId(shop.getId(), AuditAction.CUSTOMER.name(), savedCustomer.getId(), AuditAction.CUSTOMER_CREATED, userId, null, newValue);
+        } catch (Exception e) {
+            log.error("Error logging audit for customer creation", e);
         }
 
         return convertToDTO(savedCustomer);
@@ -117,8 +122,17 @@ public class CustomerService {
             throw new ApplicationException("A customer with this phone number already exists in this shop", "PHONE_ALREADY_EXISTS");
         }
 
+        // Store old value for audit
+        String oldValue = null;
+        try {
+            oldValue = objectMapper.writeValueAsString(convertToDTO(customer));
+        } catch (Exception e) {
+            log.error("Error serializing old customer value for audit", e);
+        }
+
         // Update the customer
         customer.setName(customerDTO.getName().trim());
+        customer.setEntityName(customerDTO.getEntityName().trim());
         customer.setPhone(customerDTO.getPhone().trim());
         customer.setCurrentBalance(customerDTO.getCurrentBalance());
 
@@ -129,6 +143,15 @@ public class CustomerService {
         customer.setUpdatedAt(LocalDateTime.now());
 
         Customer updatedCustomer = customerRepository.save(customer);
+
+        // Audit log: Customer updated
+        try {
+            String newValue = objectMapper.writeValueAsString(convertToDTO(updatedCustomer));
+            auditService.logAuditLongId(shop.getId(), AuditAction.CUSTOMER.name(), updatedCustomer.getId(), AuditAction.CUSTOMER_UPDATED, userId, oldValue, newValue);
+        } catch (Exception e) {
+            log.error("Error logging audit for customer update", e);
+        }
+
         return convertToDTO(updatedCustomer);
     }
 
@@ -173,7 +196,7 @@ public class CustomerService {
 
     /**
      * Helper: Create opening balance ledger entry for a new customer
-     * Creates a JAMA (Debit) entry to track the opening balance
+     * Creates a BAKI (Debit) entry to track the opening balance
      */
     private void createOpeningBalanceLedgerEntry(Customer customer, Long userId) {
         try {
@@ -186,7 +209,7 @@ public class CustomerService {
             ledgerEntry.setCustomer(customer);
             ledgerEntry.setShop(customer.getShop());
             ledgerEntry.setCreatedByUser(user);
-            ledgerEntry.setEntryType(CustomerLedger.LedgerEntryType.JAMA);
+            ledgerEntry.setEntryType(CustomerLedger.LedgerEntryType.BAKI);
             ledgerEntry.setAmount(customer.getOpeningBalance());
             ledgerEntry.setBalanceAfter(customer.getCurrentBalance());
             ledgerEntry.setNotes("Opening balance for new customer");
@@ -194,6 +217,12 @@ public class CustomerService {
             ledgerEntry.setCreatedAt(LocalDateTime.now());
 
             customerLedgerRepository.save(ledgerEntry);
+            try {
+                String newValue = objectMapper.writeValueAsString(convertToDTO(ledgerEntry));
+                auditService.logAuditLongId(customer.getShop().getId(), AuditAction.LEDGER.name(), ledgerEntry.getId(), AuditAction.LEDGER_ENTRY_CREATED, userId, null, newValue);
+            } catch (Exception e) {
+                log.error("Error logging audit for ledger entry creation", e);
+            }
         } catch (Exception e) {
             // Log the exception but don't fail the customer creation
             // The customer is already created, we just couldn't create the ledger entry
@@ -208,6 +237,7 @@ public class CustomerService {
         CustomerDTO dto = new CustomerDTO();
         dto.setId(customer.getId());
         dto.setName(customer.getName());
+        dto.setEntityName(customer.getEntityName());
         dto.setPhone(customer.getPhone());
         dto.setOpeningBalance(customer.getOpeningBalance());
         dto.setCurrentBalance(customer.getCurrentBalance());
@@ -215,6 +245,41 @@ public class CustomerService {
         dto.setIsActive(customer.getIsActive());
         dto.setCreatedAt(customer.getCreatedAt());
         dto.setUpdatedAt(customer.getUpdatedAt());
+        return dto;
+    }
+
+    private CustomerLedgerDTO convertToDTO(CustomerLedger ledger) {
+        CustomerLedgerDTO dto = new CustomerLedgerDTO();
+        dto.setId(ledger.getId());
+        dto.setCustomerId(ledger.getCustomer().getId());
+        dto.setShopId(ledger.getShop().getId());
+        dto.setEntryType(ledger.getEntryType());
+        dto.setAmount(ledger.getAmount());
+        dto.setBalanceAfter(ledger.getBalanceAfter());
+        dto.setReferenceEntryId(ledger.getReferenceEntry() != null ? ledger.getReferenceEntry().getId() : null);
+        dto.setNotes(ledger.getNotes());
+        dto.setEntryDate(ledger.getEntryDate());
+        dto.setCreatedAt(ledger.getCreatedAt());
+
+        // Set customer info if available
+        if (ledger.getCustomer() != null) {
+            CustomerDTO customerDTO = new CustomerDTO();
+            customerDTO.setId(ledger.getCustomer().getId());
+            customerDTO.setName(ledger.getCustomer().getName());
+            customerDTO.setPhone(ledger.getCustomer().getPhone());
+            dto.setCustomer(customerDTO);
+        }
+
+        // Set created by user info if available
+        if (ledger.getCreatedByUser() != null) {
+            UserDTO userDTO = new UserDTO(
+                    ledger.getCreatedByUser().getId(),
+                    ledger.getCreatedByUser().getName(),
+                    ledger.getCreatedByUser().getEmail()
+            );
+            dto.setCreatedByUser(userDTO);
+        }
+
         return dto;
     }
 }

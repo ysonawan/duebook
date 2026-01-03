@@ -2,13 +2,13 @@ package com.duebook.app.service;
 
 import com.duebook.app.dto.ShopDTO;
 import com.duebook.app.exception.ApplicationException;
-import com.duebook.app.model.Shop;
-import com.duebook.app.model.ShopUser;
-import com.duebook.app.model.User;
+import com.duebook.app.model.*;
 import com.duebook.app.repository.ShopRepository;
 import com.duebook.app.repository.ShopUserRepository;
 import com.duebook.app.repository.UserRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,11 +18,14 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ShopService {
 
     private final ShopRepository shopRepository;
     private final ShopUserRepository shopUserRepository;
     private final UserRepository userRepository;
+    private final AuditService auditService;
+    private final ObjectMapper objectMapper;
 
     /**
      * Get all shops for the authenticated user
@@ -73,6 +76,14 @@ public class ShopService {
 
         shopUserRepository.save(shopUser);
 
+        // Audit log: Shop created
+        try {
+            String newValue = objectMapper.writeValueAsString(convertToDTO(savedShop));
+            auditService.logAuditLongId(savedShop.getId(), AuditAction.SHOP.name(), savedShop.getId(), AuditAction.SHOP_CREATED, userId, null, newValue);
+        } catch (Exception e) {
+            log.error("Error logging audit for shop creation", e);
+        }
+
         return convertToDTO(savedShop);
     }
 
@@ -92,6 +103,14 @@ public class ShopService {
             throw new ApplicationException("You don't have permission to update this shop");
         }
 
+        // Store old value for audit
+        String oldValue = null;
+        try {
+            oldValue = objectMapper.writeValueAsString(convertToDTO(shop));
+        } catch (Exception e) {
+            log.error("Error serializing old shop value for audit", e);
+        }
+
         shop.setName(shopDTO.getName().trim());
         shop.setAddress(shopDTO.getAddress() != null ? shopDTO.getAddress().trim() : null);
         if (shopDTO.getIsActive() != null) {
@@ -100,6 +119,15 @@ public class ShopService {
         shop.setUpdatedAt(LocalDateTime.now());
 
         Shop updatedShop = shopRepository.save(shop);
+
+        // Audit log: Shop updated
+        try {
+            String newValue = objectMapper.writeValueAsString(convertToDTO(updatedShop));
+            auditService.logAuditLongId(shopId, AuditAction.SHOP.name(), shopId, AuditAction.SHOP_UPDATED, userId, oldValue, newValue);
+        } catch (Exception e) {
+            log.error("Error logging audit for shop update", e);
+        }
+
         return convertToDTO(updatedShop);
     }
 

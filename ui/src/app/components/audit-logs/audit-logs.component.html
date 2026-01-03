@@ -1,0 +1,264 @@
+<div class="bg-gradient-to-br from-slate-50 to-slate-100">
+    <div class="p-4">
+        <div class="max-w-7xl mx-auto space-y-6">
+
+            <!-- Header -->
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+                <div>
+                    <h1 class="text-xl md:text-2xl font-bold text-gray-700 mb-2">Audit Logs</h1>
+                    <p class="text-gray-600 text-sm">Track all system transactions and changes</p>
+                </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <div class="grid grid-cols-1 md:grid-cols-6 gap-4">
+                    <!-- Shop Filter -->
+                    <div class="space-y-2">
+                        <label class="block text-sm font-semibold text-gray-700">Shop</label>
+                        <select
+                                [(ngModel)]="selectedShopId"
+                                (change)="onShopChange()"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors text-sm">
+                            <option *ngFor="let shop of shops" [value]="shop.id">{{ shop.name }}</option>
+                        </select>
+                    </div>
+
+                    <!-- Action Filter -->
+                    <div class="space-y-2">
+                        <label class="block text-sm font-semibold text-gray-700">Action</label>
+                        <select
+                                [(ngModel)]="filterAction"
+                                (change)="onFilterChange()"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors text-sm">
+                            <option value="">All Actions</option>
+                            <option *ngFor="let action of availableActions" [value]="action">{{ action }}</option>
+                        </select>
+                    </div>
+
+                    <!-- Entity Type Filter -->
+                    <div class="space-y-2">
+                        <label class="block text-sm font-semibold text-gray-700">Entity Type</label>
+                        <select
+                                [(ngModel)]="filterEntityType"
+                                (change)="onFilterChange()"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors text-sm">
+                            <option value="">All Types</option>
+                            <option *ngFor="let type of availableEntityTypes" [value]="type">{{ type }}</option>
+                        </select>
+                    </div>
+
+                    <!-- Start Date Filter -->
+                    <div class="space-y-2">
+                        <label class="block text-sm font-semibold text-gray-700">Start Date</label>
+                        <input
+                                type="date"
+                                [(ngModel)]="startDate"
+                                (change)="onFilterChange()"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors text-sm">
+                    </div>
+
+                    <!-- End Date Filter -->
+                    <div class="space-y-2">
+                        <label class="block text-sm font-semibold text-gray-700">End Date</label>
+                        <input
+                                type="date"
+                                [(ngModel)]="endDate"
+                                (change)="onFilterChange()"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors text-sm">
+                    </div>
+
+                    <!-- Clear Filters -->
+                    <div class="flex items-end">
+                        <button
+                                (click)="filterAction = ''; filterEntityType = ''; startDate = ''; endDate = ''; onFilterChange()"
+                                class="w-full px-4 py-2 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 transition-colors">
+                            Clear Filters
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loading State -->
+            <div *ngIf="loading" class="flex items-center justify-center py-20">
+                <div class="text-center">
+                    <i class="fas fa-spinner fa-spin text-indigo-600 text-4xl mb-4"></i>
+                    <p class="mt-4 text-lg text-gray-600 font-medium">Loading audit logs...</p>
+                </div>
+            </div>
+
+            <!-- No Logs State -->
+            <div *ngIf="!loading && auditLogs.length === 0" class="bg-white rounded-xl shadow-md p-12">
+                <div class="text-center">
+                    <i class="fas fa-history text-6xl text-gray-300 mb-4"></i>
+                    <h3 class="text-xl font-semibold text-gray-700 mb-2">No audit logs found</h3>
+                    <p class="text-gray-500">No system transactions match your filters.</p>
+                </div>
+            </div>
+
+            <!-- Audit Logs Table -->
+            <div *ngIf="!loading && auditLogs.length > 0" class="bg-white rounded-xl shadow-md overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead class="bg-gray-50 border-b border-gray-200">
+                        <tr>
+                            <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Date/Time</th>
+                            <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Action</th>
+                            <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Entity</th>
+                            <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Performed By</th>
+                            <th class="px-4 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Action</th>
+                        </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                        <tr *ngFor="let log of auditLogs" class="hover:bg-gray-50 transition-colors">
+                            <td class="px-4 py-2 whitespace-nowrap text-sm">
+                                {{ formatDate(log.performedAt) }}
+                            </td>
+                            <td class="px-4 py-2 whitespace-nowrap text-sm">
+                                <div [ngClass]="getActionBadgeColor(log.action)" class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium gap-2">
+                                    <i [ngClass]="'fas ' + getActionIcon(log.action)"></i>
+                                    {{ log.action }}
+                                </div>
+                            </td>
+                            <td class="px-4 py-2 whitespace-nowrap text-sm">
+                                {{ log.entityType }}
+                            </td>
+                            <td class="px-4 py-2 whitespace-nowrap text-sm">
+                                {{ log.performedByName }}
+                            </td>
+                            <td class="px-4 py-2 whitespace-nowrap text-center">
+                                <button
+                                        (click)="viewDetails(log)"
+                                        class="text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                        title="View entry details">
+                                    <i class="fas fa-eye text-base"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <div class="bg-white px-4 py-2 border-t border-gray-200">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div class="text-sm text-gray-600">
+                            Showing <span class="font-semibold">{{ (currentPage * pageSize) + 1 }}</span> to
+                            <span class="font-semibold">{{ Math.min((currentPage + 1) * pageSize, totalElements) }}</span> of
+                            <span class="font-semibold">{{ totalElements }}</span> logs
+                        </div>
+
+                        <div class="flex items-center gap-2 justify-end">
+                            <button
+                                    (click)="onPageChange(currentPage - 1)"
+                                    [disabled]="currentPage === 0"
+                                    class="px-3 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+
+                            <button
+                                    *ngFor="let pageNum of pageNumbers"
+                                    (click)="onPageChange(pageNum)"
+                                    [class.bg-indigo-600]="currentPage === pageNum"
+                                    [class.text-white]="currentPage === pageNum"
+                                    [class.bg-gray-100]="currentPage !== pageNum"
+                                    [class.text-gray-700]="currentPage !== pageNum"
+                                    class="px-3 py-2 rounded-lg font-medium transition-colors">
+                                {{ pageNum + 1 }}
+                            </button>
+
+                            <button
+                                    (click)="onPageChange(currentPage + 1)"
+                                    [disabled]="currentPage >= totalPages - 1"
+                                    class="px-3 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Detail Modal -->
+<div *ngIf="showDetailModal && selectedLog" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <!-- Modal Header -->
+        <div class="sticky top-0 bg-white px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+            <h2 class="text-xl font-bold text-gray-700">Audit Log Details</h2>
+            <button
+                    (click)="closeDetailModal()"
+                    class="text-gray-400 hover:text-gray-600 transition-colors">
+                <i class="fas fa-times text-2xl"></i>
+            </button>
+        </div>
+
+        <!-- Modal Content -->
+        <div class="p-6 space-y-6">
+            <!-- Header Info -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pb-6 border-b border-gray-200">
+                <div>
+                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Action</p>
+                    <p class="text-lg font-bold">
+                        <span [ngClass]="getActionBadgeColor(selectedLog.action)" class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium gap-2">
+                            <i [ngClass]="'fas ' + getActionIcon(selectedLog.action)"></i>
+                            {{ selectedLog.action }}
+                        </span>
+                    </p>
+                </div>
+
+                <div>
+                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Date/Time</p>
+                    <p class="text-sm font-medium text-gray-700">{{ formatDate(selectedLog.performedAt) }}</p>
+                </div>
+
+                <div>
+                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Entity Type</p>
+                    <p class="text-sm font-medium text-gray-700">{{ selectedLog.entityType }}</p>
+                </div>
+
+                <div>
+                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Entity ID</p>
+                    <p class="text-sm font-medium text-gray-700">#{{ selectedLog.entityId }}</p>
+                </div>
+
+                <div class="md:col-span-2">
+                    <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Performed By</p>
+                    <p class="text-sm font-medium text-gray-700">{{ selectedLog.performedByName }} (ID: {{ selectedLog.performedById }})</p>
+                </div>
+            </div>
+
+            <!-- Old Value -->
+            <div *ngIf="selectedLog.oldValue" class="space-y-2">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Previous Value</p>
+                <div class="bg-gray-50 rounded-lg p-4 border border-gray-200 overflow-auto max-h-48">
+                    <pre class="text-sm text-gray-700 font-mono whitespace-pre-wrap break-words">{{ formatJsonValue(selectedLog.oldValue) }}</pre>
+                </div>
+            </div>
+
+            <!-- New Value -->
+            <div *ngIf="selectedLog.newValue" class="space-y-2">
+                <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide">Current Value</p>
+                <div class="bg-gray-50 rounded-lg p-4 border border-gray-200 overflow-auto max-h-48">
+                    <pre class="text-sm text-gray-700 font-mono whitespace-pre-wrap break-words">{{ formatJsonValue(selectedLog.newValue) }}</pre>
+                </div>
+            </div>
+
+            <!-- No Changes -->
+            <div *ngIf="!selectedLog.oldValue && !selectedLog.newValue" class="text-center py-8">
+                <p class="text-gray-600">No value changes recorded for this action</p>
+            </div>
+        </div>
+
+        <!-- Modal Footer -->
+        <div class="sticky bottom-0 bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
+            <button
+                    (click)="closeDetailModal()"
+                    class="px-6 py-2 bg-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-400 transition-colors">
+                Close
+            </button>
+        </div>
+    </div>
+</div>
+

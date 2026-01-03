@@ -24,7 +24,7 @@
                         <select
                                 [(ngModel)]="filterStatus"
                                 (change)="onFilterChange()"
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors">
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors text-sm">
                             <option value="ALL" selected>All Shops</option>
                             <option value="ACTIVE">Active Only</option>
                             <option value="INACTIVE">Inactive Only</option>
@@ -39,7 +39,7 @@
                                     [(ngModel)]="searchTerm"
                                     (input)="onSearchChange()"
                                     placeholder="Search by shop name..."
-                                    class="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors">
+                                    class="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors text-sm">
                             <i class="fas fa-search text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2"></i>
                         </div>
                     </div>
@@ -47,16 +47,16 @@
             </div>
 
             <!-- Summary Cards -->
-            <div *ngIf="!loading && filteredShops.length > 0" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div *ngIf="!loading && filteredShops.length > 0" class="grid grid-cols-2 sm:grid-cols-2 gap-3 md:gap-4">
                 <!-- Total Shops Card -->
                 <div class="bg-white rounded-lg shadow-md p-4 border-l-4 border-blue-500">
                     <div class="flex items-center justify-between">
-                        <div>
+                        <div class="flex-1">
                             <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Total Shops</p>
                             <p class="text-2xl font-bold text-gray-700 mt-1">{{ totalShops }}</p>
                         </div>
-                        <div class="bg-blue-100 p-3 rounded-lg">
-                            <i class="fas fa-store text-2xl text-blue-600"></i>
+                        <div class="bg-blue-100 p-2 rounded-lg flex-shrink-0 hidden md:block">
+                            <i class="fas fa-store text-blue-600"></i>
                         </div>
                     </div>
                 </div>
@@ -64,12 +64,12 @@
                 <!-- Active Shops Card -->
                 <div class="bg-white rounded-lg shadow-md p-4 border-l-4 border-emerald-500">
                     <div class="flex items-center justify-between">
-                        <div>
+                        <div class="flex-1">
                             <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Active Shops</p>
                             <p class="text-2xl font-bold text-emerald-600 mt-1">{{ activeShops }}</p>
                         </div>
-                        <div class="bg-emerald-100 p-3 rounded-lg">
-                            <i class="fas fa-check-circle text-2xl text-emerald-600"></i>
+                        <div class="bg-emerald-100 p-2 rounded-lg flex-shrink-0 hidden md:block">
+                            <i class="fas fa-check-circle text-emerald-600"></i>
                         </div>
                     </div>
                 </div>
@@ -103,59 +103,51 @@
                     <table class="w-full">
                         <thead class="bg-gray-50 border-b border-gray-200">
                         <tr>
-                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Shop Name</th>
-                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Address</th>
-                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
-                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Created Date</th>
-                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Updated Date</th>
-                            <th class="px-6 py-4 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
+                            <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Shop Name</th>
+                            <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Address</th>
+                            <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
+                            <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Created Date</th>
+                            <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Updated Date</th>
+                            <th class="px-4 py-2 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
                         </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-200">
                         <tr *ngFor="let shop of filteredShops"
                             class="hover:bg-gray-50 transition-colors"
                             [ngClass]="{'opacity-60 bg-gray-50': !shop.isActive}">
-                            <td class="px-6 py-4">
-                                <div class="text-sm font-semibold" [ngClass]="!shop.isActive ? 'text-gray-500' : 'text-gray-700'">
-                                    {{ shop.name }}
-                                </div>
+                            <td class="px-4 py-2 text-sm font-semibold">
+                                {{ shop.name }}
                             </td>
-                            <td class="px-6 py-4">
-                                <div class="text-sm" [ngClass]="!shop.isActive ? 'text-gray-400' : 'text-gray-600'">
-                                    {{ shop.address || 'N/A' }}
-                                </div>
+                            <td class="px-4 py-2 text-sm">
+                                {{ shop.address || 'N/A' }}
                             </td>
-                            <td class="px-6 py-4">
+                            <td class="px-4 py-2 text-sm">
                                 <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium"
                                       [ngClass]="shop.isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-200 text-gray-600'">
                                     {{ shop.isActive ? 'Active' : 'Inactive' }}
                                 </span>
                             </td>
-                            <td class="px-6 py-4">
-                                <div class="text-sm" [ngClass]="!shop.isActive ? 'text-gray-400' : 'text-gray-600'">
-                                    {{ formatDate(shop.createdAt) }}
-                                </div>
+                            <td class="px-4 py-2 text-sm">
+                                {{ formatDate(shop.createdAt) }}
                             </td>
-                            <td class="px-6 py-4">
-                                <div class="text-sm" [ngClass]="!shop.isActive ? 'text-gray-400' : 'text-gray-600'">
-                                    {{ formatDate(shop.updatedAt) }}
-                                </div>
+                            <td class="px-4 py-2 text-sm">
+                                {{ formatDate(shop.updatedAt) }}
                             </td>
-                            <td class="px-6 py-4">
+                            <td class="px-4 py-2">
                                 <div class="flex items-center justify-center gap-2">
                                     <button
                                             (click)="editShop(shop)"
-                                            class="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                                            class=" text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
                                             title="Edit">
-                                        <i class="fas fa-edit text-lg"></i>
+                                        <i class="fas fa-edit text-base"></i>
                                     </button>
                                     <button
                                             (click)="toggleShopStatus(shop)"
-                                            class="p-2 transition-colors"
+                                            class=" transition-colors"
                                             [ngClass]="shop.isActive ? 'text-red-600 hover:bg-red-50' : 'text-emerald-600 hover:bg-emerald-50'"
                                             [title]="shop.isActive ? 'Deactivate' : 'Activate'">
-                                        <i *ngIf="shop.isActive" class="fas fa-eye-slash text-lg"></i>
-                                        <i *ngIf="!shop.isActive" class="fas fa-eye text-lg"></i>
+                                        <i *ngIf="shop.isActive" class="fas fa-eye-slash text-base"></i>
+                                        <i *ngIf="!shop.isActive" class="fas fa-eye text-base"></i>
                                     </button>
                                 </div>
                             </td>
@@ -173,7 +165,7 @@
                     <!-- Header Row -->
                     <div class="flex items-start justify-between mb-3">
                         <div class="flex-1">
-                            <h3 class="text-lg font-bold mb-1" [ngClass]="!shop.isActive ? 'text-gray-500' : 'text-gray-700'">
+                            <h3 class="text-base font-bold mb-1" [ngClass]="!shop.isActive ? 'text-gray-500' : 'text-gray-700'">
                                 {{ shop.name }}
                             </h3>
                             <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium"
@@ -184,16 +176,16 @@
                         <div class="flex gap-2 ml-2">
                             <button
                                     (click)="editShop(shop)"
-                                    class="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
-                                <i class="fas fa-edit text-lg"></i>
+                                    class=" text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
+                                <i class="fas fa-edit text-base"></i>
                             </button>
                             <button
                                     (click)="toggleShopStatus(shop)"
-                                    class="p-2 transition-colors"
+                                    class=" transition-colors"
                                     [ngClass]="shop.isActive ? 'text-red-600 hover:bg-red-50' : 'text-emerald-600 hover:bg-emerald-50'"
                                     [title]="shop.isActive ? 'Deactivate' : 'Activate'">
-                                <i *ngIf="shop.isActive" class="fas fa-eye-slash text-lg"></i>
-                                <i *ngIf="!shop.isActive" class="fas fa-eye text-lg"></i>
+                                <i *ngIf="shop.isActive" class="fas fa-eye-slash text-base"></i>
+                                <i *ngIf="!shop.isActive" class="fas fa-eye text-base"></i>
                             </button>
                         </div>
                     </div>

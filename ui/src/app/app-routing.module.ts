@@ -12,6 +12,7 @@ import {LedgerComponent} from "./components/ledger/ledger.component";
 import {LedgerFormComponent} from "./components/ledger-form/ledger-form.component";
 import {DashboardDuebookComponent} from "./components/dashboard/dashboard-duebook.component";
 import {SuppliersComponent} from "./components/suppliers/suppliers.component";
+import {AuditLogsComponent} from "./components/audit-logs/audit-logs.component";
 
 const routes: Routes = [
   { path: '', redirectTo: '/login', pathMatch: 'full' },
@@ -27,7 +28,8 @@ const routes: Routes = [
   { path: 'shops', component: ShopsComponent, canActivate: [AuthGuard] },
   { path: 'shops/new', component: ShopFormComponent, canActivate: [AuthGuard] },
   { path: 'shops/edit/:id', component: ShopFormComponent, canActivate: [AuthGuard] },
-  { path: 'profile', component: ProfileComponent, canActivate: [AuthGuard] }
+  { path: 'profile', component: ProfileComponent, canActivate: [AuthGuard] },
+  { path: 'audit-logs', component: AuditLogsComponent, canActivate: [AuthGuard] }
 ];
 
 @NgModule({
@@ -35,4 +37,6 @@ const routes: Routes = [
   exports: [RouterModule]
 })
 export class AppRoutingModule { }
+
+
 
