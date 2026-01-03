@@ -49,15 +49,15 @@ export class AuditLogService {
   /**
    * Get distinct actions for a shop
    */
-  getDistinctActions(shopId: number): Observable<string[]> {
-    return this.http.get<string[]>(`${this.apiUrl}/shop/${shopId}/actions`);
+  getDistinctActions(): Observable<string[]> {
+    return this.http.get<string[]>(`${this.apiUrl}/actions`);
   }
 
   /**
    * Get distinct entity types for a shop
    */
-  getDistinctEntityTypes(shopId: number): Observable<string[]> {
-    return this.http.get<string[]>(`${this.apiUrl}/shop/${shopId}/entity-types`);
+  getDistinctEntityTypes(): Observable<string[]> {
+    return this.http.get<string[]>(`${this.apiUrl}/entity-types`);
   }
 }
 

@@ -138,40 +138,41 @@ public class AuditLogController {
         return ResponseEntity.ok(dtos);
     }
 
-    @GetMapping("/shop/{shopId}/actions")
+    @GetMapping("/actions")
     public ResponseEntity<?> getDistinctActions(
-            @PathVariable Long shopId,
             Authentication authentication) {
         Long userId = extractUserId(authentication);
-
-        // Skip verification if shopId is 0 (All Shops)
-        if (shopId != 0) {
-            verifyUserAccessToShop(shopId, userId);
+        List<Long> accessibleShopIds;
+        // All Shops - fetch list of shops user has access to
+        accessibleShopIds = getAccessibleShopIdsForUser(userId);
+        if (accessibleShopIds.isEmpty()) {
+            // User has no accessible shops
+            return ResponseEntity.ok(new org.springframework.data.domain.PageImpl<>(new java.util.ArrayList<>()));
         }
 
-        log.debug("Fetching distinct actions for shop ID: {} by user ID: {}", shopId, userId);
+        log.debug("Fetching distinct actions for shop IDs: {} by user ID: {}", accessibleShopIds, userId);
 
-        var actions = auditLogRepository.findDistinctActionsByShopId(shopId);
-        log.info("Retrieved {} distinct actions for shop ID: {}", actions.size(), shopId);
+        var actions = auditLogRepository.findDistinctActionsByShopId(accessibleShopIds);
+        log.info("Retrieved {} distinct actions for shop IDs: {}", actions.size(), accessibleShopIds);
 
         return ResponseEntity.ok(actions);
     }
 
-    @GetMapping("/shop/{shopId}/entity-types")
+    @GetMapping("/entity-types")
     public ResponseEntity<?> getDistinctEntityTypes(
-            @PathVariable Long shopId,
             Authentication authentication) {
         Long userId = extractUserId(authentication);
-
-        // Skip verification if shopId is 0 (All Shops)
-        if (shopId != 0) {
-            verifyUserAccessToShop(shopId, userId);
+        List<Long> accessibleShopIds;
+        // All Shops - fetch list of shops user has access to
+        accessibleShopIds = getAccessibleShopIdsForUser(userId);
+        if (accessibleShopIds.isEmpty()) {
+            // User has no accessible shops
+            return ResponseEntity.ok(new org.springframework.data.domain.PageImpl<>(new java.util.ArrayList<>()));
         }
+        log.debug("Fetching distinct entity types for shop IDs: {} by user ID: {}", accessibleShopIds, userId);
 
-        log.debug("Fetching distinct entity types for shop ID: {} by user ID: {}", shopId, userId);
-
-        var entityTypes = auditLogRepository.findDistinctEntityTypesByShopId(shopId);
-        log.info("Retrieved {} distinct entity types for shop ID: {}", entityTypes.size(), shopId);
+        var entityTypes = auditLogRepository.findDistinctEntityTypesByShopId(accessibleShopIds);
+        log.info("Retrieved {} distinct entity types for shop IDs: {}", entityTypes.size(), accessibleShopIds);
 
         return ResponseEntity.ok(entityTypes);
     }

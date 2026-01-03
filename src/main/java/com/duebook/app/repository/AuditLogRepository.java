@@ -28,11 +28,11 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
             @Param("entityType") String entityType,
             Pageable pageable);
 
-    @Query("SELECT DISTINCT al.action FROM AuditLog al WHERE al.shop.id = :shopId ORDER BY al.action ASC")
-    List<String> findDistinctActionsByShopId(@Param("shopId") Long shopId);
+    @Query("SELECT DISTINCT al.action FROM AuditLog al WHERE al.shop.id IN :shopIds  ORDER BY al.action ASC")
+    List<String> findDistinctActionsByShopId(@Param("shopIds") List<Long> shopIds);
 
-    @Query("SELECT DISTINCT al.entityType FROM AuditLog al WHERE al.shop.id = :shopId ORDER BY al.entityType ASC")
-    List<String> findDistinctEntityTypesByShopId(@Param("shopId") Long shopId);
+    @Query("SELECT DISTINCT al.entityType FROM AuditLog al WHERE al.shop.id IN :shopIds ORDER BY al.entityType ASC")
+    List<String> findDistinctEntityTypesByShopId(@Param("shopIds") List<Long> shopIds);
 
     @Query("SELECT al FROM AuditLog al WHERE al.shop.id IN :shopIds AND al.performedAt >= :startDate AND al.performedAt <= :endDate ORDER BY al.performedAt DESC")
     Page<AuditLog> findByShopIdAndDateRangeOrderByPerformedAtDesc(

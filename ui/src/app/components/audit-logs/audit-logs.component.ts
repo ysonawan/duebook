@@ -45,6 +45,7 @@ export class AuditLogsComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    this.loadFilterOptions();
     this.loadShops();
     this.setDefaultDateRange();
   }
@@ -81,15 +82,8 @@ export class AuditLogsComponent implements OnInit {
   }
 
   loadFilterOptions(): void {
-    if (!this.selectedShopId) {
-      // Reset filter options when "All Shops" is selected
-      this.availableActions = [];
-      this.availableEntityTypes = [];
-      return;
-    }
-
     // Load available actions
-    this.auditLogService.getDistinctActions(this.selectedShopId).subscribe({
+    this.auditLogService.getDistinctActions().subscribe({
       next: (actions) => {
         this.availableActions = actions;
       },
@@ -99,7 +93,7 @@ export class AuditLogsComponent implements OnInit {
     });
 
     // Load available entity types
-    this.auditLogService.getDistinctEntityTypes(this.selectedShopId).subscribe({
+    this.auditLogService.getDistinctEntityTypes().subscribe({
       next: (types) => {
         this.availableEntityTypes = types;
       },
@@ -116,7 +110,6 @@ export class AuditLogsComponent implements OnInit {
     this.startDate = '';
     this.endDate = '';
     this.setDefaultDateRange();
-    this.loadFilterOptions();
     this.loadAuditLogs();
   }
 
