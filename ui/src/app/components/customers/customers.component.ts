@@ -15,12 +15,19 @@ import {TimezoneService} from "../../services/timezone.service";
 })
 export class CustomersComponent implements OnInit {
   customers: Customer[] = [];
-  filteredCustomers: Customer[] = [];
   shops: Shop[] = [];
   loading = true;
-  filterStatus: string = 'ALL';
-  filterShop: string = '';
+  selectedShopId: number = 0;
+
+  // Filters
+  filterStatus: string = '';
   searchTerm: string = '';
+
+  // Pagination
+  currentPage: number = 0;
+  pageSize: number = 20;
+  totalElements: number = 0;
+  totalPages: number = 0;
 
   // Summary statistics
   totalCustomers: number = 0;
@@ -43,72 +50,79 @@ export class CustomersComponent implements OnInit {
 
   ngOnInit(): void {
     this.loadShops();
-    this.loadCustomers();
   }
 
   loadShops(): void {
     this.shopService.getAllShops().subscribe({
       next: (shops) => {
         this.shops = shops.filter(s => s.isActive !== false);
+
+        // Set selected shop to "All Shops" by default (null)
+        this.selectedShopId = 0;
+        this.loadCustomers();
       },
       error: (error) => {
-
+        console.error('Error loading shops:', error);
+        this.loading = false;
       }
     });
+  }
+
+  onShopChange(): void {
+    this.currentPage = 0;
+    this.filterStatus = '';
+    this.searchTerm = '';
+    this.loadCustomers();
   }
 
   loadCustomers(): void {
     this.loading = true;
-    this.customerService.getAllCustomers().subscribe({
-      next: (customers) => {
-        this.customers = customers;
-        this.applyFilters();
+
+    // Use 0 to indicate "all shops" - the backend will handle it
+    const shopId = this.selectedShopId || 0;
+
+    this.customerService.getCustomersPaginated(
+      shopId,
+      this.currentPage,
+      this.pageSize,
+      this.filterStatus,
+      this.searchTerm
+    ).subscribe({
+      next: (response: any) => {
+        this.customers = response.content || [];
+        this.totalElements = response.totalElements || 0;
+        this.totalPages = response.totalPages || 0;
+        this.calculateSummaryStatistics();
         this.loading = false;
       },
       error: (error) => {
+        console.error('Error loading customers:', error);
         this.loading = false;
       }
     });
   }
 
-  applyFilters(): void {
-    this.filteredCustomers = this.customers.filter(customer => {
-      const matchesSearch = customer.name.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
-        customer.phone.includes(this.searchTerm) || (customer.entityName && customer.entityName.toLowerCase().includes(this.searchTerm));
+  onFilterChange(): void {
+    this.currentPage = 0;
+    this.loadCustomers();
+  }
 
-      // Filter by status
-      let matchesStatus = true;
-      if (this.filterStatus === 'ACTIVE') {
-        matchesStatus = customer.isActive !== false;
-      } else if (this.filterStatus === 'INACTIVE') {
-        matchesStatus = customer.isActive === false;
-      }
+  onSearchChange(): void {
+    this.currentPage = 0;
+    this.loadCustomers();
+  }
 
-      // Filter by shop
-      let matchesShop = true;
-      if (this.filterShop) {
-        matchesShop = customer.shopId?.toString() === this.filterShop;
-      }
-
-      return matchesSearch && matchesStatus && matchesShop;
-    });
-    this.calculateSummaryStatistics();
+  onPageChange(page: number): void {
+    this.currentPage = page;
+    this.loadCustomers();
   }
 
   calculateSummaryStatistics(): void {
-    this.totalCustomers = this.customers.length;
+    this.totalCustomers = this.totalElements;
     this.activeCustomers = this.customers.filter(c => c.isActive !== false).length;
     this.totalOpeningBalance = this.customers.reduce((sum, c) => sum + (c.openingBalance || 0), 0);
     this.totalCurrentBalance = this.customers.reduce((sum, c) => sum + (c.currentBalance || 0), 0);
     this.prepareCharts();
-  }
-
-  onFilterChange(): void {
-    this.applyFilters();
-  }
-
-  onSearchChange(): void {
-    this.applyFilters();
   }
 
   addNewCustomer(): void {
@@ -141,7 +155,7 @@ export class CustomersComponent implements OnInit {
             this.loadCustomers();
           },
           error: (error) => {
-
+            console.error('Error updating customer:', error);
           }
         });
       }
@@ -187,7 +201,7 @@ export class CustomersComponent implements OnInit {
 
   prepareBalanceDistributionChart(): void {
     // Filter customers with balance > 0
-    const activeCustomersWithBalance = this.filteredCustomers
+    const activeCustomersWithBalance = this.customers
       .filter(c => c.currentBalance !== 0 && c.currentBalance > 0)
       .sort((a, b) => Math.abs(b.currentBalance) - Math.abs(a.currentBalance))
       .slice(0, 10); // Top 10 customers
@@ -243,27 +257,16 @@ export class CustomersComponent implements OnInit {
   }
 
   prepareCustomersByShopChart(): void {
-    // Count customers by shop
-    const shopCounts = new Map<number, { name: string; count: number }>();
+    // For single shop, create simple distribution
+    const activeCustomers = this.customers.filter(c => c.isActive !== false).length;
+    const inactiveCustomers = this.customers.filter(c => c.isActive === false).length;
 
-    this.filteredCustomers.forEach(customer => {
-      const shopId = customer.shopId || 0;
-      const shopName = this.getShopName(customer.shopId);
+    const chartData = [
+      { name: 'Active', value: activeCustomers, itemStyle: { color: '#10b981' } },
+      { name: 'Inactive', value: inactiveCustomers, itemStyle: { color: '#d1d5db' } }
+    ];
 
-      if (!shopCounts.has(shopId)) {
-        shopCounts.set(shopId, { name: shopName, count: 0 });
-      }
-      const shop = shopCounts.get(shopId)!;
-      shop.count++;
-    });
-
-    const chartData = Array.from(shopCounts.values()).map((shop, index) => ({
-      name: shop.name,
-      value: shop.count,
-      itemStyle: { color: this.getColorForIndex(index) }
-    }));
-
-    this.hasShopChartData = chartData.length > 0;
+    this.hasShopChartData = chartData.some(d => d.value > 0);
 
     const isMobile = window.innerWidth < 640;
 
@@ -320,4 +323,18 @@ export class CustomersComponent implements OnInit {
     ];
     return colors[index % colors.length];
   }
+
+  get pageNumbers(): number[] {
+    const pages: number[] = [];
+    const startPage = Math.max(0, this.currentPage - 2);
+    const endPage = Math.min(this.totalPages - 1, this.currentPage + 2);
+
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(i);
+    }
+
+    return pages;
+  }
+
+  Math = Math;
 }

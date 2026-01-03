@@ -20,6 +20,7 @@
                                 [(ngModel)]="selectedShopId"
                                 (change)="onShopChange()"
                                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors text-sm">
+                            <option [value]="0">All Shops</option>
                             <option *ngFor="let shop of shops" [value]="shop.id">{{ shop.name }}</option>
                         </select>
                     </div>
@@ -72,7 +73,7 @@
                     <div class="flex items-end">
                         <button
                                 (click)="filterAction = ''; filterEntityType = ''; startDate = ''; endDate = ''; onFilterChange()"
-                                class="w-full px-4 py-2 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 transition-colors">
+                                class="w-full px-4 py-2 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 transition-colors text-sm">
                             Clear Filters
                         </button>
                     </div>
@@ -103,6 +104,7 @@
                         <thead class="bg-gray-50 border-b border-gray-200">
                         <tr>
                             <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Date/Time</th>
+                            <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Shop</th>
                             <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Action</th>
                             <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Entity</th>
                             <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Performed By</th>
@@ -113,6 +115,9 @@
                         <tr *ngFor="let log of auditLogs" class="hover:bg-gray-50 transition-colors">
                             <td class="px-4 py-2 whitespace-nowrap text-sm">
                                 {{ formatDate(log.performedAt) }}
+                            </td>
+                            <td class="px-4 py-2 whitespace-nowrap text-sm">
+                                {{ getShopName(log.shopId) }}
                             </td>
                             <td class="px-4 py-2 whitespace-nowrap text-sm">
                                 <div [ngClass]="getActionBadgeColor(log.action)" class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium gap-2">

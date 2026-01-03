@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { CustomerLedger } from '../models/ledger.model';
 
@@ -39,6 +39,41 @@ export class LedgerService {
     return this.http.get<CustomerLedger[]>(`${this.apiUrl}/date-range`, {
       params: { startDate, endDate }
     });
+  }
+
+  /**
+   * Get paginated ledger entries for a shop with filters and date range
+   */
+  getLedgerEntriesPaginated(
+    shopId: number,
+    page: number = 0,
+    size: number = 20,
+    customerId?: number,
+    entryType?: string,
+    startDate?: string,
+    endDate?: string
+  ): Observable<any> {
+    let params = new HttpParams()
+      .set('page', page.toString())
+      .set('size', size.toString());
+
+    if (customerId) {
+      params = params.set('customerId', customerId.toString());
+    }
+
+    if (entryType && entryType.trim()) {
+      params = params.set('entryType', entryType);
+    }
+
+    if (startDate && startDate.trim()) {
+      params = params.set('startDate', startDate);
+    }
+
+    if (endDate && endDate.trim()) {
+      params = params.set('endDate', endDate);
+    }
+
+    return this.http.get<any>(`${this.apiUrl}/shop/${shopId}/paginated`, { params });
   }
 }
 

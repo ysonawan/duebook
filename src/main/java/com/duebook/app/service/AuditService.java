@@ -9,13 +9,10 @@ import com.duebook.app.repository.ShopRepository;
 import com.duebook.app.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -69,13 +66,4 @@ public class AuditService {
         return new UUID(0, id);
     }
 
-    @Transactional(readOnly = true)
-    public List<String> getDistinctActionsForShop(Long shopId) {
-        return auditLogRepository.findDistinctActionsByShopId(shopId);
-    }
-
-    @Transactional(readOnly = true)
-    public List<String> getDistinctEntityTypesForShop(Long shopId) {
-        return auditLogRepository.findDistinctEntityTypesByShopId(shopId);
-    }
 }

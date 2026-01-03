@@ -7,7 +7,7 @@ import { CustomerLedger, LedgerEntryType } from '../../models/ledger.model';
 import { Customer } from '../../models/customer.model';
 import { Shop } from '../../models/shop.model';
 import Swal from 'sweetalert2';
-import {TimezoneService} from "../../services/timezone.service";
+import { TimezoneService } from '../../services/timezone.service';
 
 @Component({
   selector: 'app-ledger',
@@ -17,31 +17,28 @@ import {TimezoneService} from "../../services/timezone.service";
 })
 export class LedgerComponent implements OnInit {
   ledgerEntries: CustomerLedger[] = [];
-  filteredEntries: CustomerLedger[] = [];
   customers: Customer[] = [];
   shops: Shop[] = [];
   loading = true;
+  selectedShopId: number = 0;
 
   // Filters
-  filterShop: string = '';
-  filterCustomer: string = '';
+  filterCustomer: number | null = null;
   filterType: string = '';
   startDate: string = '';
   endDate: string = '';
+
+  // Pagination
+  currentPage: number = 0;
+  pageSize: number = 20;
+  totalElements: number = 0;
+  totalPages: number = 0;
 
   // Summary statistics
   totalDebit: number = 0;
   totalCredit: number = 0;
   netBalance: number = 0;
   totalEntries: number = 0;
-
-  // Chart options
-  debitCreditTrendChartOptions: any = {};
-  entryTypeDistributionChartOptions: any = {};
-  dailyTransactionChartOptions: any = {};
-  hasDebitCreditData = false;
-  hasEntryTypeData = false;
-  hasDailyData = false;
 
   constructor(
     private ledgerService: LedgerService,
@@ -60,7 +57,6 @@ export class LedgerComponent implements OnInit {
     });
     this.loadShops();
     this.loadCustomers();
-    this.loadLedgerEntries();
     this.setDefaultDateRange();
   }
 
@@ -77,9 +73,14 @@ export class LedgerComponent implements OnInit {
     this.shopService.getAllShops().subscribe({
       next: (shops) => {
         this.shops = shops.filter(s => s.isActive !== false);
+
+        // Set selected shop to "All Shops" by default (null)
+        this.selectedShopId = 0;
+        this.loadLedgerEntries();
       },
       error: (error) => {
         console.error('Error loading shops:', error);
+        this.loading = false;
       }
     });
   }
@@ -90,72 +91,69 @@ export class LedgerComponent implements OnInit {
         this.customers = customers;
       },
       error: (error) => {
+        console.error('Error loading customers:', error);
       }
     });
+  }
+
+  onShopChange(): void {
+    this.currentPage = 0;
+    this.filterCustomer = null;
+    this.filterType = '';
+    this.startDate = '';
+    this.endDate = '';
+    this.setDefaultDateRange();
+    this.loadLedgerEntries();
   }
 
   loadLedgerEntries(): void {
     this.loading = true;
-    this.ledgerService.getAllLedgerEntries().subscribe({
-      next: (entries) => {
-        this.ledgerEntries = entries.sort((a, b) => {
-          return new Date(b.entryDate).getTime() - new Date(a.entryDate).getTime();
-        });
-        this.applyFilters();
+
+    // Use 0 to indicate "all shops" - the backend will handle it
+    const shopId = this.selectedShopId || 0;
+
+    this.ledgerService.getLedgerEntriesPaginated(
+      shopId,
+      this.currentPage,
+      this.pageSize,
+      this.filterCustomer || undefined,
+      this.filterType,
+      this.startDate,
+      this.endDate
+    ).subscribe({
+      next: (response: any) => {
+        this.ledgerEntries = response.content || [];
+        this.totalElements = response.totalElements || 0;
+        this.totalPages = response.totalPages || 0;
+        this.calculateSummaryStatistics();
         this.loading = false;
       },
       error: (error) => {
+        console.error('Error loading ledger entries:', error);
         this.loading = false;
       }
     });
   }
 
-  applyFilters(): void {
-    this.filteredEntries = this.ledgerEntries.filter(entry => {
-      // Filter by shop
-      let matchesShop = true;
-      if (this.filterShop) {
-        matchesShop = entry.shopId?.toString() === this.filterShop;
-      }
+  onFilterChange(): void {
+    this.currentPage = 0;
+    this.loadLedgerEntries();
+  }
 
-      // Filter by customer
-      let matchesCustomer = true;
-      if (this.filterCustomer) {
-        matchesCustomer = entry.customerId?.toString() === this.filterCustomer;
-      }
-
-      // Filter by entry type
-      let matchesType = true;
-      if (this.filterType) {
-        matchesType = entry.entryType === this.filterType;
-      }
-
-      // Filter by date range
-      let matchesDate = true;
-      if (this.startDate || this.endDate) {
-        const entryDate = new Date(entry.entryDate);
-        if (this.startDate) {
-          matchesDate = matchesDate && entryDate >= new Date(this.startDate);
-        }
-        if (this.endDate) {
-          matchesDate = matchesDate && entryDate <= new Date(this.endDate);
-        }
-      }
-
-      return matchesShop && matchesCustomer && matchesType && matchesDate;
-    });
-    this.calculateSummaryStatistics();
+  onPageChange(page: number): void {
+    this.currentPage = page;
+    this.loadLedgerEntries();
   }
 
   calculateSummaryStatistics(): void {
     // Get all entry IDs that have been reversed
-    const reversedEntryIds: number[] = this.filteredEntries
+    const reversedEntryIds: number[] = this.ledgerEntries
       .filter(e => e.entryType === LedgerEntryType.REVERSAL)
       .map(e => e.referenceEntryId)
       .filter((id): id is number => id !== undefined);
 
     // Filter out reversed entries and reversals themselves
-    const effectiveEntries = this.filteredEntries.filter(e =>
+    const effectiveEntries = this.ledgerEntries.filter(e =>
       !reversedEntryIds.includes(e.id!) && e.entryType !== LedgerEntryType.REVERSAL
     );
 
@@ -170,12 +168,6 @@ export class LedgerComponent implements OnInit {
 
     this.netBalance = this.totalDebit - this.totalCredit;
     this.totalEntries = effectiveEntries.length;
-
-    this.prepareCharts();
-  }
-
-  onFilterChange(): void {
-    this.applyFilters();
   }
 
   viewLedgerEntry(entry: CustomerLedger): void {
@@ -194,7 +186,7 @@ export class LedgerComponent implements OnInit {
             </div>
             <div class="space-y-2">
               <p class="text-xs font-medium text-gray-500 uppercase">Customer</p>
-              <p class="text-sm font-semibold text-gray-700">${entry.customer?.name || 'N/A'}</p>
+              <p class="text-sm font-semibold text-gray-700">${this.getCustomerName(entry.customerId)}</p>
             </div>
             <div class="space-y-2">
               <p class="text-xs font-medium text-gray-500 uppercase">Shop</p>
@@ -211,14 +203,6 @@ export class LedgerComponent implements OnInit {
             <div class="space-y-2">
               <p class="text-xs font-medium text-gray-500 uppercase">Balance After</p>
               <p class="text-sm font-semibold text-gray-700">${this.formatCurrency(entry.balanceAfter)}</p>
-            </div>
-            <div class="space-y-2">
-              <p class="text-xs font-medium text-gray-500 uppercase">Created By</p>
-              <p class="text-sm font-semibold text-gray-700">${entry.createdByUser?.name || 'N/A'}</p>
-            </div>
-            <div class="space-y-2">
-              <p class="text-xs font-medium text-gray-500 uppercase">Created At</p>
-              <p class="text-sm font-semibold text-gray-700">${this.formatDateTime(entry.createdAt) || 'N/A'}</p>
             </div>
             <div class="space-y-2">
               <p class="text-xs font-medium text-gray-500 uppercase">Reference Entry ID</p>
@@ -250,10 +234,6 @@ export class LedgerComponent implements OnInit {
     this.router.navigate(['/ledger/new']);
   }
 
-  viewCustomerLedger(customerId: number): void {
-    this.router.navigate(['/ledger/customer', customerId]);
-  }
-
   reverseLedgerEntry(entry: CustomerLedger): void {
     if (entry.entryType === LedgerEntryType.REVERSAL) {
       Swal.fire('Warning!', 'This entry is already a reversal and cannot be reversed again', 'warning');
@@ -271,7 +251,7 @@ export class LedgerComponent implements OnInit {
         <div class="text-left space-y-3">
           <p>Are you sure you want to reverse this ledger entry?</p>
           <div class="bg-gray-50 p-3 rounded text-sm space-y-1">
-            <p><strong>Customer:</strong> ${entry.customer?.name || 'N/A'}</p>
+            <p><strong>Customer:</strong> ${this.getCustomerName(entry.customerId)}</p>
             <p><strong>Type:</strong> ${entry.entryType}</p>
             <p><strong>Amount:</strong> ${entry.amount}</p>
             <p><strong>Date:</strong> ${this.formatDate(entry.entryDate)}</p>
@@ -343,10 +323,6 @@ export class LedgerComponent implements OnInit {
     return this.timezoneService.formatDateOnlyInIndiaTimezone(date, {});
   }
 
-  formatDateTime(date: Date): string {
-    return this.timezoneService.formatDateInIndiaTimezone(date, {});
-  }
-
   formatCurrency(value: number | undefined): string {
     if (!value || value === 0) {
       return new Intl.NumberFormat('en-IN', {
@@ -364,223 +340,18 @@ export class LedgerComponent implements OnInit {
     }).format(value);
   }
 
-  // Chart preparation methods
-  prepareCharts(): void {
-    this.prepareDebitCreditTrendChart();
-    this.prepareEntryTypeDistributionChart();
-    this.prepareDailyTransactionChart();
+  get pageNumbers(): number[] {
+    const pages: number[] = [];
+    const startPage = Math.max(0, this.currentPage - 2);
+    const endPage = Math.min(this.totalPages - 1, this.currentPage + 2);
+
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(i);
+    }
+
+    return pages;
   }
 
-  prepareDebitCreditTrendChart(): void {
-    // Get daily debit and credit totals
-    const dailyData = new Map<string, { debit: number; credit: number }>();
-
-    const reversedEntryIds: number[] = this.filteredEntries
-      .filter(e => e.entryType === LedgerEntryType.REVERSAL)
-      .map(e => e.referenceEntryId)
-      .filter((id): id is number => id !== undefined);
-
-    const effectiveEntries = this.filteredEntries.filter(e =>
-      !reversedEntryIds.includes(e.id!) && e.entryType !== LedgerEntryType.REVERSAL
-    );
-
-    effectiveEntries.forEach(entry => {
-      const date = new Date(entry.entryDate).toLocaleDateString();
-      if (!dailyData.has(date)) {
-        dailyData.set(date, { debit: 0, credit: 0 });
-      }
-      const data = dailyData.get(date)!;
-      if (entry.entryType === LedgerEntryType.BAKI) {
-        data.debit += entry.amount;
-      } else {
-        data.credit += entry.amount;
-      }
-    });
-
-    const dates = Array.from(dailyData.keys()).sort();
-    const debits = dates.map(date => dailyData.get(date)!.debit);
-    const credits = dates.map(date => dailyData.get(date)!.credit);
-
-    this.hasDebitCreditData = dates.length > 0;
-
-    const isMobile = window.innerWidth < 640;
-
-    this.debitCreditTrendChartOptions = {
-      tooltip: {
-        trigger: 'axis',
-        axisPointer: { type: 'cross' },
-        formatter: (params: any) => {
-          if (!Array.isArray(params)) params = [params];
-          return params.map((p: any) => `${p.seriesName}: ₹${p.value.toFixed(2)}`).join('<br/>');
-        }
-      },
-      legend: {
-        data: ['Debit (Baki)', 'Credit (Paid)'],
-        textStyle: { fontSize: isMobile ? 10 : 11 }
-      },
-      grid: {
-        left: isMobile ? 40 : 50,
-        right: isMobile ? 10 : 20,
-        top: 40,
-        bottom: isMobile ? 50 : 60,
-        containLabel: true
-      },
-      xAxis: {
-        type: 'category',
-        data: dates,
-        axisLabel: {
-          rotate: isMobile ? 45 : 30,
-          fontSize: isMobile ? 9 : 10
-        }
-      },
-      yAxis: {
-        type: 'value',
-        axisLabel: { fontSize: isMobile ? 10 : 11 }
-      },
-      series: [
-        {
-          name: 'Debit (Baki)',
-          data: debits,
-          type: 'line',
-          smooth: true,
-          itemStyle: { color: '#FF6B6B' },
-          areaStyle: { color: 'rgba(255, 107, 107, 0.2)' }
-        },
-        {
-          name: 'Credit (Paid)',
-          data: credits,
-          type: 'line',
-          smooth: true,
-          itemStyle: { color: '#51CF66' },
-          areaStyle: { color: 'rgba(81, 207, 102, 0.2)' }
-        }
-      ]
-    };
-  }
-
-  prepareEntryTypeDistributionChart(): void {
-    const reversedEntryIds: number[] = this.filteredEntries
-      .filter(e => e.entryType === LedgerEntryType.REVERSAL)
-      .map(e => e.referenceEntryId)
-      .filter((id): id is number => id !== undefined);
-
-    const effectiveEntries = this.filteredEntries.filter(e =>
-      !reversedEntryIds.includes(e.id!) && e.entryType !== LedgerEntryType.REVERSAL
-    );
-
-    const debitCount = effectiveEntries.filter(e => e.entryType === LedgerEntryType.BAKI).length;
-    const creditCount = effectiveEntries.filter(e => e.entryType === LedgerEntryType.PAID).length;
-
-    const data = [
-      { name: 'Baki (Debit)', value: debitCount, itemStyle: { color: '#FF6B6B' } },
-      { name: 'Paid (Credit)', value: creditCount, itemStyle: { color: '#51CF66' } }
-    ].filter(d => d.value > 0);
-
-    this.hasEntryTypeData = data.length > 0;
-
-    const isMobile = window.innerWidth < 640;
-
-    this.entryTypeDistributionChartOptions = {
-      tooltip: {
-        trigger: 'item',
-        formatter: (params: any) => {
-          return `${params.name}: ${params.value} entries`;
-        },
-        confine: true
-      },
-      legend: {
-        orient: isMobile ? 'horizontal' : 'vertical',
-        bottom: isMobile ? 0 : undefined,
-        right: isMobile ? undefined : 10,
-        top: isMobile ? undefined : 'center',
-        left: isMobile ? 'center' : undefined,
-        textStyle: { fontSize: isMobile ? 10 : 11 }
-      },
-      series: [
-        {
-          name: 'Entries',
-          type: 'pie',
-          radius: isMobile ? '50%' : '65%',
-          center: isMobile ? ['50%', '42%'] : ['40%', '50%'],
-          data: data,
-          emphasis: {
-            itemStyle: {
-              shadowBlur: 10,
-              shadowOffsetX: 0,
-              shadowColor: 'rgba(0, 0, 0, 0.5)'
-            }
-          },
-          label: { show: false }
-        }
-      ]
-    };
-  }
-
-  prepareDailyTransactionChart(): void {
-    // Get daily transaction counts
-    const dailyCounts = new Map<string, number>();
-
-    const reversedEntryIds: number[] = this.filteredEntries
-      .filter(e => e.entryType === LedgerEntryType.REVERSAL)
-      .map(e => e.referenceEntryId)
-      .filter((id): id is number => id !== undefined);
-
-    const effectiveEntries = this.filteredEntries.filter(e =>
-      !reversedEntryIds.includes(e.id!) && e.entryType !== LedgerEntryType.REVERSAL
-    );
-
-    effectiveEntries.forEach(entry => {
-      const date = new Date(entry.entryDate).toLocaleDateString();
-      dailyCounts.set(date, (dailyCounts.get(date) || 0) + 1);
-    });
-
-    const dates = Array.from(dailyCounts.keys()).sort();
-    const counts = dates.map(date => dailyCounts.get(date) || 0);
-
-    this.hasDailyData = dates.length > 0;
-
-    const isMobile = window.innerWidth < 640;
-
-    this.dailyTransactionChartOptions = {
-      tooltip: {
-        trigger: 'axis',
-        axisPointer: { type: 'shadow' },
-        formatter: (params: any) => {
-          if (!Array.isArray(params)) params = [params];
-          return params.map((p: any) => `${p.name}: ${p.value} transactions`).join('<br/>');
-        }
-      },
-      grid: {
-        left: isMobile ? 40 : 50,
-        right: isMobile ? 10 : 20,
-        top: 20,
-        bottom: isMobile ? 50 : 60,
-        containLabel: true
-      },
-      xAxis: {
-        type: 'category',
-        data: dates,
-        axisLabel: {
-          rotate: isMobile ? 45 : 30,
-          fontSize: isMobile ? 9 : 10
-        }
-      },
-      yAxis: {
-        type: 'value',
-        axisLabel: { fontSize: isMobile ? 10 : 11 }
-      },
-      series: [
-        {
-          data: counts.map(count => ({ value: count, itemStyle: { color: '#4F46E5' } })),
-          type: 'bar',
-          itemStyle: {
-            borderRadius: [8, 8, 0, 0]
-          },
-          emphasis: {
-            focus: 'series'
-          }
-        }
-      ]
-    };
-  }
+  Math = Math;
 }
+

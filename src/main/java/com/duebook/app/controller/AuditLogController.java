@@ -19,6 +19,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 /**
  * Controller for retrieving audit logs
  * All endpoints require authentication
@@ -52,10 +54,24 @@ public class AuditLogController {
             Authentication authentication) {
 
         Long userId = extractUserId(authentication);
-        verifyUserAccessToShop(shopId, userId);
 
-        log.debug("Fetching paginated audit logs for shop ID: {} (page: {}, size: {}, action: {}, entityType: {}, startDate: {}, endDate: {}) by user ID: {}",
-                shopId, page, size, action, entityType, startDate, endDate, userId);
+        // Determine which shops the user can access
+        List<Long> accessibleShopIds;
+        if (shopId == 0) {
+            // All Shops - fetch list of shops user has access to
+            accessibleShopIds = getAccessibleShopIdsForUser(userId);
+            if (accessibleShopIds.isEmpty()) {
+                // User has no accessible shops
+                return ResponseEntity.ok(new org.springframework.data.domain.PageImpl<>(new java.util.ArrayList<>()));
+            }
+        } else {
+            // Specific shop - verify access
+            verifyUserAccessToShop(shopId, userId);
+            accessibleShopIds = java.util.List.of(shopId);
+        }
+
+        log.debug("Fetching paginated audit logs for shop ID: {} (accessible shops: {}, page: {}, size: {}, action: {}, entityType: {}, startDate: {}, endDate: {}) by user ID: {}",
+                shopId, accessibleShopIds, page, size, action, entityType, startDate, endDate, userId);
 
         Pageable pageable = PageRequest.of(page, size);
         Page<AuditLog> auditLogs;
@@ -83,41 +99,41 @@ public class AuditLogController {
             if (action != null && !action.trim().isEmpty() && entityType != null && !entityType.trim().isEmpty()) {
                 // Filter by action, entity type, and date range
                 auditLogs = auditLogRepository.findByShopIdAndActionAndEntityTypeAndDateRangeOrderByPerformedAtDesc(
-                        shopId, action, entityType, startDateTime, endDateTime, pageable);
+                        accessibleShopIds, action, entityType, startDateTime, endDateTime, pageable);
             } else if (action != null && !action.trim().isEmpty()) {
                 // Filter by action and date range
                 auditLogs = auditLogRepository.findByShopIdAndActionAndDateRangeOrderByPerformedAtDesc(
-                        shopId, action, startDateTime, endDateTime, pageable);
+                        accessibleShopIds, action, startDateTime, endDateTime, pageable);
             } else if (entityType != null && !entityType.trim().isEmpty()) {
                 // Filter by entity type and date range
                 auditLogs = auditLogRepository.findByShopIdAndEntityTypeAndDateRangeOrderByPerformedAtDesc(
-                        shopId, entityType, startDateTime, endDateTime, pageable);
+                        accessibleShopIds, entityType, startDateTime, endDateTime, pageable);
             } else {
                 // Filter by date range only
                 auditLogs = auditLogRepository.findByShopIdAndDateRangeOrderByPerformedAtDesc(
-                        shopId, startDateTime, endDateTime, pageable);
+                        accessibleShopIds, startDateTime, endDateTime, pageable);
             }
         } else {
             // Without date range
             if (action != null && !action.trim().isEmpty() && entityType != null && !entityType.trim().isEmpty()) {
                 // Filter by both action and entity type
-                auditLogs = auditLogRepository.findByShopIdAndActionAndEntityTypeOrderByPerformedAtDesc(shopId, action, entityType, pageable);
+                auditLogs = auditLogRepository.findByShopIdAndActionAndEntityTypeOrderByPerformedAtDesc(accessibleShopIds, action, entityType, pageable);
             } else if (action != null && !action.trim().isEmpty()) {
                 // Filter by action only
-                auditLogs = auditLogRepository.findByShopIdAndActionOrderByPerformedAtDesc(shopId, action, pageable);
+                auditLogs = auditLogRepository.findByShopIdAndActionOrderByPerformedAtDesc(accessibleShopIds, action, pageable);
             } else if (entityType != null && !entityType.trim().isEmpty()) {
                 // Filter by entity type only
-                auditLogs = auditLogRepository.findByShopIdAndEntityTypeOrderByPerformedAtDesc(shopId, entityType, pageable);
+                auditLogs = auditLogRepository.findByShopIdAndEntityTypeOrderByPerformedAtDesc(accessibleShopIds, entityType, pageable);
             } else {
                 // No filters, get all audit logs for the shop
-                auditLogs = auditLogRepository.findByShopIdOrderByPerformedAtDesc(shopId, pageable);
+                auditLogs = auditLogRepository.findByShopIdOrderByPerformedAtDesc(accessibleShopIds, pageable);
             }
         }
 
         Page<AuditLogDTO> dtos = auditLogs.map(this::convertToDTO);
 
-        log.info("Retrieved page {} with {} audit logs for shop ID: {} (action: {}, entityType: {}, startDate: {}, endDate: {})",
-                page, dtos.getContent().size(), shopId, action, entityType, startDate, endDate);
+        log.info("Retrieved page {} with {} audit logs for accessible shops: {} (action: {}, entityType: {}, startDate: {}, endDate: {})",
+                page, dtos.getContent().size(), accessibleShopIds, action, entityType, startDate, endDate);
 
         return ResponseEntity.ok(dtos);
     }
@@ -127,7 +143,11 @@ public class AuditLogController {
             @PathVariable Long shopId,
             Authentication authentication) {
         Long userId = extractUserId(authentication);
-        verifyUserAccessToShop(shopId, userId);
+
+        // Skip verification if shopId is 0 (All Shops)
+        if (shopId != 0) {
+            verifyUserAccessToShop(shopId, userId);
+        }
 
         log.debug("Fetching distinct actions for shop ID: {} by user ID: {}", shopId, userId);
 
@@ -142,7 +162,11 @@ public class AuditLogController {
             @PathVariable Long shopId,
             Authentication authentication) {
         Long userId = extractUserId(authentication);
-        verifyUserAccessToShop(shopId, userId);
+
+        // Skip verification if shopId is 0 (All Shops)
+        if (shopId != 0) {
+            verifyUserAccessToShop(shopId, userId);
+        }
 
         log.debug("Fetching distinct entity types for shop ID: {} by user ID: {}", shopId, userId);
 
@@ -194,5 +218,16 @@ public class AuditLogController {
         }
 
         log.debug("Access verified for user ID: {} to shop ID: {}", userId, shopId);
+    }
+
+    private List<Long> getAccessibleShopIdsForUser(Long userId) {
+        log.debug("Fetching accessible shop IDs for user ID: {}", userId);
+        // Get all shops where user is an ACTIVE member
+        List<ShopUser> shopUsers = shopUserRepository.findAllActiveByUserId(userId);
+        List<Long> shopIds = shopUsers.stream()
+                .map(su -> su.getShop().getId())
+                .toList();
+        log.debug("User ID: {} has access to {} shops: {}", userId, shopIds.size(), shopIds);
+        return shopIds;
     }
 }

@@ -18,7 +18,19 @@
 
             <!-- Filters -->
             <div class="bg-white rounded-xl shadow-md p-6">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <!-- Shop Selection -->
+                    <div class="space-y-2">
+                        <label class="block text-sm font-semibold text-gray-700">Shop</label>
+                        <select
+                                [(ngModel)]="selectedShopId"
+                                (change)="onShopChange()"
+                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors text-sm">
+                            <option [value]="0">All Shops</option>
+                            <option *ngFor="let shop of shops" [value]="shop.id">{{ shop.name }}</option>
+                        </select>
+                    </div>
+
                     <!-- Status Filter -->
                     <div class="space-y-2">
                         <label class="block text-sm font-semibold text-gray-700">Filter by Status</label>
@@ -26,21 +38,9 @@
                                 [(ngModel)]="filterStatus"
                                 (change)="onFilterChange()"
                                 class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors text-sm">
-                            <option value="ALL" selected>All Customers</option>
+                            <option value="">All Customers</option>
                             <option value="ACTIVE">Active Only</option>
                             <option value="INACTIVE">Inactive Only</option>
-                        </select>
-                    </div>
-
-                    <!-- Shop Filter -->
-                    <div class="space-y-2">
-                        <label class="block text-sm font-semibold text-gray-700">Filter by Shop</label>
-                        <select
-                                [(ngModel)]="filterShop"
-                                (change)="onFilterChange()"
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors text-sm">
-                            <option value="">All Shops</option>
-                            <option *ngFor="let shop of shops" [value]="shop.id">{{ shop.name }}</option>
                         </select>
                     </div>
 
@@ -52,16 +52,25 @@
                                 type="text"
                                 [(ngModel)]="searchTerm"
                                 (input)="onSearchChange()"
-                                placeholder="Search by name, entity name or phone..."
+                                placeholder="Search by name or phone..."
                                 class="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors text-sm">
                             <i class="fas fa-search text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2"></i>
                         </div>
+                    </div>
+
+                    <!-- Clear Filters -->
+                    <div class="flex items-end">
+                        <button
+                                (click)="filterStatus = ''; searchTerm = ''; onFilterChange()"
+                                class="w-full px-4 py-2 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 transition-colors text-sm">
+                            Clear Filters
+                        </button>
                     </div>
                 </div>
             </div>
 
             <!-- Summary Cards -->
-            <div *ngIf="!loading && filteredCustomers.length > 0" class="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+            <div *ngIf="!loading && customers.length > 0" class="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
                 <!-- Total Customers Card -->
                 <div class="bg-white rounded-lg shadow-md p-4 border-l-4 border-blue-500">
                     <div class="flex items-center justify-between">
@@ -112,7 +121,7 @@
             </div>
 
             <!-- No Customers State -->
-            <div *ngIf="!loading && filteredCustomers.length === 0" class="bg-white rounded-xl shadow-md p-12">
+            <div *ngIf="!loading && customers.length === 0" class="bg-white rounded-xl shadow-md p-12">
                 <div class="text-center">
                     <i class="fas fa-users text-6xl text-gray-300 mb-4"></i>
                     <h3 class="text-xl font-semibold text-gray-700 mb-2">No customers found</h3>
@@ -126,7 +135,7 @@
             </div>
 
             <!-- Customers List - Responsive Table (Desktop & Mobile) -->
-            <div *ngIf="!loading && filteredCustomers.length > 0" class="bg-white rounded-xl shadow-md overflow-hidden">
+            <div *ngIf="!loading && customers.length > 0" class="bg-white rounded-xl shadow-md overflow-hidden">
                 <div class="overflow-x-auto">
                     <table class="w-full">
                         <thead class="bg-gray-50 border-b border-gray-200">
@@ -142,7 +151,7 @@
                         </tr>
                         </thead>
                         <tbody class="bg-white divide-y divide-gray-100">
-                        <tr *ngFor="let customer of filteredCustomers"
+                        <tr *ngFor="let customer of customers"
                             class="hover:bg-gray-50 transition-colors"
                             [ngClass]="{'opacity-60 bg-gray-50': !customer.isActive}">
                             <td class="px-4 py-2 whitespace-nowrap font-semibold text-sm">
@@ -196,10 +205,48 @@
                         </tbody>
                     </table>
                 </div>
+
+                <!-- Pagination -->
+                <div class="bg-white px-4 py-2 border-t border-gray-200">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div class="text-sm text-gray-600">
+                            Showing <span class="font-semibold">{{ (currentPage * pageSize) + 1 }}</span> to
+                            <span class="font-semibold">{{ Math.min((currentPage + 1) * pageSize, totalElements) }}</span> of
+                            <span class="font-semibold">{{ totalElements }}</span> customers
+                        </div>
+
+                        <div class="flex items-center gap-2 justify-end">
+                            <button
+                                    (click)="onPageChange(currentPage - 1)"
+                                    [disabled]="currentPage === 0"
+                                    class="px-3 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+
+                            <button
+                                    *ngFor="let pageNum of pageNumbers"
+                                    (click)="onPageChange(pageNum)"
+                                    [class.bg-indigo-600]="currentPage === pageNum"
+                                    [class.text-white]="currentPage === pageNum"
+                                    [class.bg-gray-100]="currentPage !== pageNum"
+                                    [class.text-gray-700]="currentPage !== pageNum"
+                                    class="px-3 py-2 rounded-lg font-medium transition-colors">
+                                {{ pageNum + 1 }}
+                            </button>
+
+                            <button
+                                    (click)="onPageChange(currentPage + 1)"
+                                    [disabled]="currentPage >= totalPages - 1"
+                                    class="px-3 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Charts Section -->
-            <div *ngIf="!loading && filteredCustomers.length > 0" class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 lg:gap-6">
+            <div *ngIf="!loading && customers.length > 0" class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 lg:gap-6">
 
                 <!-- Balance Distribution Chart -->
                 <div class="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300 p-4 sm:p-4">
@@ -213,30 +260,30 @@
                         </div>
                     </div>
                     <div class="flex items-center justify-center h-[280px] sm:h-[280px]">
-                        <div *ngIf="hasBalanceChartData && filteredCustomers.length > 0" echarts [options]="balanceDistributionChartOptions" class="w-full h-full"></div>
-                        <div *ngIf="!hasBalanceChartData || filteredCustomers.length === 0" class="text-center">
+                        <div *ngIf="hasBalanceChartData && customers.length > 0" echarts [options]="balanceDistributionChartOptions" class="w-full h-full"></div>
+                        <div *ngIf="!hasBalanceChartData || customers.length === 0" class="text-center">
                             <i class="fas fa-pie-chart text-gray-300 text-5xl mx-auto mb-3 block"></i>
                             <p class="text-gray-500 text-sm">No balance data available</p>
                         </div>
                     </div>
                 </div>
 
-                <!-- Customers by Shop Chart -->
+                <!-- Customers by Status Chart -->
                 <div class="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300 p-4 sm:p-4">
                     <div class="flex items-center justify-between mb-5 pb-4 border-b border-gray-100">
                         <div>
-                            <h2 class="text-lg sm:text-xl font-bold text-gray-700 mb-1">Customers by Shop</h2>
-                            <p class="text-xs sm:text-sm text-gray-500">Distribution of customers across shops</p>
+                            <h2 class="text-lg sm:text-xl font-bold text-gray-700 mb-1">Customers by Status</h2>
+                            <p class="text-xs sm:text-sm text-gray-500">Distribution of active and inactive customers</p>
                         </div>
                         <div class="p-2.5 bg-gradient-to-br from-green-100 to-emerald-100 rounded-lg">
-                            <i class="fas fa-building text-green-600 text-xl"></i>
+                            <i class="fas fa-chart-bar text-green-600 text-xl"></i>
                         </div>
                     </div>
                     <div class="flex items-center justify-center h-[280px] sm:h-[280px]">
-                        <div *ngIf="hasShopChartData && filteredCustomers.length > 0" echarts [options]="customersByShopChartOptions" class="w-full h-full"></div>
-                        <div *ngIf="!hasShopChartData || filteredCustomers.length === 0" class="text-center">
-                            <i class="fas fa-building text-gray-300 text-5xl mx-auto mb-3 block"></i>
-                            <p class="text-gray-500 text-sm">No shop data available</p>
+                        <div *ngIf="hasShopChartData && customers.length > 0" echarts [options]="customersByShopChartOptions" class="w-full h-full"></div>
+                        <div *ngIf="!hasShopChartData || customers.length === 0" class="text-center">
+                            <i class="fas fa-chart-bar text-gray-300 text-5xl mx-auto mb-3 block"></i>
+                            <p class="text-gray-500 text-sm">No status data available</p>
                         </div>
                     </div>
                 </div>
@@ -245,3 +292,4 @@
         </div>
     </div>
 </div>
+

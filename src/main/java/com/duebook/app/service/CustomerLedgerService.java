@@ -13,6 +13,8 @@ import com.duebook.app.repository.ShopUserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -240,6 +242,10 @@ public class CustomerLedgerService {
         } catch (Exception e) {
             log.error("Error logging audit for balance adjustment", e);
         }
+    }
+
+    public Page<CustomerLedgerDTO> getCustomerLedgerDTOs(Page<CustomerLedger> ledgerEntries) {
+       return ledgerEntries.map(this::convertToDTO);
     }
 
     /**

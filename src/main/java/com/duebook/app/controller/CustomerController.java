@@ -1,10 +1,15 @@
 package com.duebook.app.controller;
 
 import com.duebook.app.dto.CustomerDTO;
+import com.duebook.app.dto.CustomerLedgerDTO;
+import com.duebook.app.model.CustomerLedger;
 import com.duebook.app.service.CustomerService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -13,6 +18,10 @@ import org.springframework.web.bind.annotation.*;
 import com.duebook.app.model.User;
 import com.duebook.app.repository.UserRepository;
 import com.duebook.app.exception.ApplicationException;
+import com.duebook.app.model.Customer;
+import com.duebook.app.model.ShopUser;
+import com.duebook.app.repository.CustomerRepository;
+import com.duebook.app.repository.ShopUserRepository;
 
 import java.util.List;
 
@@ -25,6 +34,8 @@ public class CustomerController {
 
     private final CustomerService customerService;
     private final UserRepository userRepository;
+    private final CustomerRepository customerRepository;
+    private final ShopUserRepository shopUserRepository;
 
     /**
      * Get all customers for the authenticated user
@@ -39,17 +50,62 @@ public class CustomerController {
     }
 
     /**
-     * Get a specific customer by ID
+     * Get paginated customers for a shop with optional filters
+     * Supports filtering by status and search term
      */
-    @GetMapping("/{id}")
-    public ResponseEntity<CustomerDTO> getCustomerById(
-            @PathVariable Long id,
+    @GetMapping("/shop/{shopId}/paginated")
+    public ResponseEntity<Page<CustomerDTO>> getCustomersByShopPaginated(
+            @PathVariable Long shopId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String searchTerm,
             Authentication authentication) {
+
         Long userId = extractUserId(authentication);
-        log.debug("Fetching customer ID: {} for user ID: {}", id, userId);
-        CustomerDTO customer = customerService.getCustomerById(id, userId);
-        log.info("Retrieved customer ID: {} for user ID: {}", id, userId);
-        return ResponseEntity.ok(customer);
+
+        // Determine which shops the user can access
+        List<Long> accessibleShopIds;
+        if (shopId == 0) {
+            // All Shops - fetch list of shops user has access to
+            accessibleShopIds = getAccessibleShopIdsForUser(userId);
+            if (accessibleShopIds.isEmpty()) {
+                // User has no accessible shops
+                return ResponseEntity.ok(new org.springframework.data.domain.PageImpl<>(new java.util.ArrayList<>()));
+            }
+        } else {
+            // Specific shop - verify access
+            verifyUserAccessToShop(shopId, userId);
+            accessibleShopIds = java.util.List.of(shopId);
+        }
+
+        log.debug("Fetching paginated customers for shop ID: {} (accessible shops: {}, page: {}, size: {}, status: {}, searchTerm: {}) by user ID: {}",
+                shopId, accessibleShopIds, page, size, status, searchTerm, userId);
+
+        Pageable pageable = PageRequest.of(page, size);
+        Page<Customer> customers = getFilteredCustomers(accessibleShopIds, status, searchTerm, pageable);
+
+        Page<CustomerDTO> dtos = customerService.getCustomerDTOs(customers);
+
+        log.info("Retrieved page {} with {} customers for accessible shops: {} (status: {}, searchTerm: {})",
+                page, dtos.getContent().size(), accessibleShopIds, status, searchTerm);
+
+        return ResponseEntity.ok(dtos);
+    }
+
+    private Page<Customer> getFilteredCustomers(List<Long> shopIds, String status, String searchTerm, Pageable pageable) {
+        boolean hasStatus = status != null && !status.trim().isEmpty();
+        boolean hasSearch = searchTerm != null && !searchTerm.trim().isEmpty();
+        boolean isActive = hasStatus && status.equals("ACTIVE");
+
+        if (hasStatus && hasSearch) {
+            return customerRepository.findByShopIdsInStatusAndSearchTermPaginated(shopIds, isActive, searchTerm, pageable);
+        } else if (hasStatus) {
+            return customerRepository.findByShopIdsInAndStatusPaginated(shopIds, isActive, pageable);
+        } else if (hasSearch) {
+            return customerRepository.findByShopIdsInAndSearchTermPaginated(shopIds, searchTerm, pageable);
+        }
+        return customerRepository.findByShopIdsInPaginated(shopIds, pageable);
     }
 
     /**
@@ -124,6 +180,33 @@ public class CustomerController {
                 .orElseThrow(() -> new ApplicationException("User not found", "USER_NOT_FOUND"));
 
         return user.getId();
+    }
+
+    private void verifyUserAccessToShop(Long shopId, Long userId) {
+        ShopUser shopUser = shopUserRepository.findByShopIdAndUserId(shopId, userId)
+                .orElseThrow(() -> {
+                    log.warn("User ID: {} attempted to access customers for shop ID: {} without access", userId, shopId);
+                    return new ApplicationException("You don't have access to this shop", "FORBIDDEN");
+                });
+
+        // Verify user is still active in the shop
+        if (shopUser.getStatus() != ShopUser.ShopUserStatus.ACTIVE) {
+            log.warn("Inactive user ID: {} attempted to access customers for shop ID: {}", userId, shopId);
+            throw new ApplicationException("Your access to this shop has been revoked", "FORBIDDEN");
+        }
+
+        log.debug("Access verified for user ID: {} to shop ID: {}", userId, shopId);
+    }
+
+    private List<Long> getAccessibleShopIdsForUser(Long userId) {
+        log.debug("Fetching accessible shop IDs for user ID: {}", userId);
+        // Get all shops where user is an ACTIVE member
+        List<ShopUser> shopUsers = shopUserRepository.findAllActiveByUserId(userId);
+        List<Long> shopIds = shopUsers.stream()
+                .map(su -> su.getShop().getId())
+                .toList();
+        log.debug("User ID: {} has access to {} shops: {}", userId, shopIds.size(), shopIds);
+        return shopIds;
     }
 }
 

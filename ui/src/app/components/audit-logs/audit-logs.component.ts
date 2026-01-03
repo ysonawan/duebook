@@ -16,7 +16,7 @@ export class AuditLogsComponent implements OnInit {
   auditLogs: AuditLog[] = [];
   loading = true;
   shops: Shop[] = [];
-  selectedShopId: number | null = null;
+  selectedShopId: number = 0;
 
   // Filters
   filterAction: string = '';
@@ -63,18 +63,9 @@ export class AuditLogsComponent implements OnInit {
       next: (shops) => {
         this.shops = shops.filter(s => s.isActive !== false);
 
-        // Set selected shop to first available shop
-        if (this.shops.length > 0) {
-          this.selectedShopId = this.shops[0].id || null;
-          if (this.selectedShopId) {
-            this.loadFilterOptions();
-            this.loadAuditLogs();
-          } else {
-            this.loading = false;
-          }
-        } else {
-          this.loading = false;
-        }
+        // Set selected shop to "All Shops" by default (null)
+        this.selectedShopId = 0;
+        this.loadAuditLogs();
       },
       error: (error) => {
         console.error('Error loading shops:', error);
@@ -83,8 +74,19 @@ export class AuditLogsComponent implements OnInit {
     });
   }
 
+  getShopName(shopId: number | undefined): string {
+    if (!shopId) return 'N/A';
+    const shop = this.shops.find(s => s.id === shopId);
+    return shop?.name || 'N/A';
+  }
+
   loadFilterOptions(): void {
-    if (!this.selectedShopId) return;
+    if (!this.selectedShopId) {
+      // Reset filter options when "All Shops" is selected
+      this.availableActions = [];
+      this.availableEntityTypes = [];
+      return;
+    }
 
     // Load available actions
     this.auditLogService.getDistinctActions(this.selectedShopId).subscribe({
@@ -113,6 +115,7 @@ export class AuditLogsComponent implements OnInit {
     this.filterEntityType = '';
     this.startDate = '';
     this.endDate = '';
+    this.setDefaultDateRange();
     this.loadFilterOptions();
     this.loadAuditLogs();
   }
@@ -120,13 +123,11 @@ export class AuditLogsComponent implements OnInit {
   loadAuditLogs(): void {
     this.loading = true;
 
-    if (!this.selectedShopId) {
-      this.loading = false;
-      return;
-    }
+    // Use 0 or null to indicate "all shops" - the backend will handle it
+    const shopId = this.selectedShopId || 0;
 
     this.auditLogService.getAuditLogsPaginated(
-      this.selectedShopId,
+      shopId,
       this.currentPage,
       this.pageSize,
       this.filterAction,

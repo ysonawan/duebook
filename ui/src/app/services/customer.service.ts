@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Customer } from '../models/customer.model';
 
@@ -31,4 +31,28 @@ export class CustomerService {
     return this.http.get<Customer[]>(`${this.apiUrl}/shops/${shopId}/active`);
   }
 
+  /**
+   * Get paginated customers for a shop with filters and search
+   */
+  getCustomersPaginated(
+    shopId: number,
+    page: number = 0,
+    size: number = 20,
+    status?: string,
+    searchTerm?: string
+  ): Observable<any> {
+    let params = new HttpParams()
+      .set('page', page.toString())
+      .set('size', size.toString());
+
+    if (status && status.trim()) {
+      params = params.set('status', status);
+    }
+
+    if (searchTerm && searchTerm.trim()) {
+      params = params.set('searchTerm', searchTerm);
+    }
+
+    return this.http.get<any>(`${this.apiUrl}/shop/${shopId}/paginated`, { params });
+  }
 }

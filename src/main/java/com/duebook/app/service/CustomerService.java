@@ -13,6 +13,7 @@ import com.duebook.app.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -228,6 +229,10 @@ public class CustomerService {
             // The customer is already created, we just couldn't create the ledger entry
             throw new ApplicationException("Failed to create opening balance ledger entry: " + e.getMessage(), "LEDGER_CREATION_FAILED");
         }
+    }
+
+    public Page<CustomerDTO> getCustomerDTOs(Page<Customer> customer) {
+        return customer.map(this::convertToDTO);
     }
 
     /**
