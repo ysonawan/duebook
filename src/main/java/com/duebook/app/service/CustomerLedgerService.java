@@ -2,6 +2,7 @@ package com.duebook.app.service;
 
 import com.duebook.app.dto.CustomerLedgerDTO;
 import com.duebook.app.dto.CustomerDTO;
+import com.duebook.app.dto.LedgerSummaryDTO;
 import com.duebook.app.dto.UserDTO;
 import com.duebook.app.exception.ApplicationException;
 import com.duebook.app.model.*;
@@ -68,7 +69,7 @@ public class CustomerLedgerService {
 
         Shop shop = customer.getShop();
         if (!isOwnerOrStaff(shop.getId(), userId)) {
-            throw new ApplicationException("Only OWNER or STAFF can create ledger entries", "FORBIDDEN");
+            throw new ApplicationException("You don't have permission to create ledger entries", "FORBIDDEN");
         }
 
         // Verify user exists
@@ -111,6 +112,12 @@ public class CustomerLedgerService {
         // Verify entry exists and user has access
         CustomerLedger originalEntry = ledgerRepository.findByIdAndUserId(ledgerId, userId)
                 .orElseThrow(() -> new ApplicationException("Ledger entry not found or you don't have access to it", "LEDGER_NOT_FOUND"));
+
+        // Verify user is OWNER or STAFF
+        Shop shop = originalEntry.getShop();
+        if (!isOwnerOrStaff(shop.getId(), userId)) {
+            throw new ApplicationException("You don't have permission to reverse ledger entries", "FORBIDDEN");
+        }
 
         // Cannot reverse a reversal entry
         if (originalEntry.getEntryType() == CustomerLedger.LedgerEntryType.REVERSAL) {
@@ -202,6 +209,86 @@ public class CustomerLedgerService {
                 .stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Get ledger summary with all filters applied (without pagination)
+     * Used for summary cards that need complete data across all pages
+     */
+    @Transactional(readOnly = true)
+    public LedgerSummaryDTO getLedgerSummary(Long userId, Long shopId, Long customerId, String entryType,
+                                            LocalDate startDate, LocalDate endDate) {
+        List<CustomerLedger> filteredEntries;
+
+        if (shopId != null && shopId > 0) {
+            // Get ledger entries for specific shop
+            filteredEntries = ledgerRepository.findByShopId(shopId);
+        } else {
+            // Get all ledger entries for user
+            filteredEntries = ledgerRepository.findAllByUserId(userId);
+        }
+
+        // Apply customer filter
+        if (customerId != null && customerId > 0) {
+            Long finalCustomerId = customerId;
+            filteredEntries = filteredEntries.stream()
+                    .filter(e -> e.getCustomer().getId().equals(finalCustomerId))
+                    .collect(Collectors.toList());
+        }
+
+        // Apply entry type filter
+        if (entryType != null && !entryType.isEmpty()) {
+            try {
+                CustomerLedger.LedgerEntryType typeEnum = CustomerLedger.LedgerEntryType.valueOf(entryType.toUpperCase());
+                filteredEntries = filteredEntries.stream()
+                        .filter(e -> e.getEntryType() == typeEnum)
+                        .collect(Collectors.toList());
+            } catch (IllegalArgumentException e) {
+                log.warn("Invalid entry type filter: {}", entryType);
+            }
+        }
+
+        // Apply date range filter
+        if (startDate != null && endDate != null) {
+            filteredEntries = filteredEntries.stream()
+                    .filter(e -> e.getEntryDate() != null &&
+                            !e.getEntryDate().isBefore(startDate) &&
+                            !e.getEntryDate().isAfter(endDate))
+                    .collect(Collectors.toList());
+        }
+
+        // Get all entry IDs that have been reversed
+        java.util.Set<Long> reversedEntryIds = filteredEntries.stream()
+                .filter(e -> e.getEntryType() == CustomerLedger.LedgerEntryType.REVERSAL)
+                .map(e -> e.getReferenceEntry() != null ? e.getReferenceEntry().getId() : null)
+                .filter(java.util.Objects::nonNull)
+                .collect(java.util.stream.Collectors.toSet());
+
+        // Filter out reversed entries and reversals themselves
+        List<CustomerLedger> effectiveEntries = filteredEntries.stream()
+                .filter(e -> !reversedEntryIds.contains(e.getId()) && e.getEntryType() != CustomerLedger.LedgerEntryType.REVERSAL)
+                .collect(Collectors.toList());
+
+        // Calculate summary
+        double totalDebit = effectiveEntries.stream()
+                .filter(e -> e.getEntryType() == CustomerLedger.LedgerEntryType.BAKI)
+                .mapToDouble(e -> e.getAmount() != null ? e.getAmount() : 0.0)
+                .sum();
+
+        double totalCredit = effectiveEntries.stream()
+                .filter(e -> e.getEntryType() == CustomerLedger.LedgerEntryType.PAID)
+                .mapToDouble(e -> e.getAmount() != null ? e.getAmount() : 0.0)
+                .sum();
+
+        double netBalance = totalDebit - totalCredit;
+        long totalEntries = effectiveEntries.size();
+
+        return LedgerSummaryDTO.builder()
+                .totalDebit(totalDebit)
+                .totalCredit(totalCredit)
+                .netBalance(netBalance)
+                .totalEntries(totalEntries)
+                .build();
     }
 
 

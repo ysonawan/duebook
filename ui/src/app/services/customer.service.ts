@@ -55,4 +55,26 @@ export class CustomerService {
 
     return this.http.get<any>(`${this.apiUrl}/shop/${shopId}/paginated`, { params });
   }
+
+  /**
+   * Get customer summary with filters (all records, not paginated)
+   * Used for summary cards that need complete data across all pages
+   */
+  getCustomerSummary(
+    shopId: number,
+    status?: string,
+    searchTerm?: string
+  ): Observable<any> {
+    let params = new HttpParams();
+
+    if (status && status.trim()) {
+      params = params.set('status', status);
+    }
+
+    if (searchTerm && searchTerm.trim()) {
+      params = params.set('searchTerm', searchTerm);
+    }
+
+    return this.http.get<any>(`${this.apiUrl}/shop/${shopId}/summary`, { params });
+  }
 }

@@ -2,6 +2,7 @@ package com.duebook.app.service;
 
 import com.duebook.app.dto.CustomerDTO;
 import com.duebook.app.dto.CustomerLedgerDTO;
+import com.duebook.app.dto.CustomerSummaryDTO;
 import com.duebook.app.dto.UserDTO;
 import com.duebook.app.exception.ApplicationException;
 import com.duebook.app.model.*;
@@ -64,7 +65,7 @@ public class CustomerService {
         Shop shop = shopRepository.findById(customerDTO.getShopId())
                 .orElseThrow(() -> new ApplicationException("Shop not found", "SHOP_NOT_FOUND"));
         if (!isOwnerOrStaff(shop.getId(), userId)) {
-            throw new ApplicationException("Only OWNER or STAFF can create customers", "FORBIDDEN");
+            throw new ApplicationException("You don't have permission to create customers", "FORBIDDEN");
         }
 
         // Validate phone uniqueness within shop
@@ -76,7 +77,7 @@ public class CustomerService {
         Customer customer = new Customer();
         customer.setShop(shop);
         customer.setName(customerDTO.getName().trim());
-        customer.setEntityName(customerDTO.getEntityName().trim());
+        customer.setEntityName(null != customerDTO.getEntityName() ? customerDTO.getEntityName().trim() : null);
         customer.setPhone(customerDTO.getPhone().trim());
         customer.setOpeningBalance(customerDTO.getOpeningBalance());
         customer.setCurrentBalance(customerDTO.getOpeningBalance());
@@ -110,7 +111,7 @@ public class CustomerService {
         Customer customer = customerRepository.findById(customerId)
                 .orElseThrow(() -> new ApplicationException("Customer not found", "CUSTOMER_NOT_FOUND"));
         if (!isOwnerOrStaff(customer.getShop().getId(), userId)) {
-            throw new ApplicationException("Only OWNER or STAFF can update customers", "FORBIDDEN");
+            throw new ApplicationException("You don't have permission to update customers", "FORBIDDEN");
         }
 
         // Verify shop exists and user has access to it
@@ -133,7 +134,7 @@ public class CustomerService {
 
         // Update the customer
         customer.setName(customerDTO.getName().trim());
-        customer.setEntityName(customerDTO.getEntityName().trim());
+        customer.setEntityName(null != customerDTO.getEntityName() ? customerDTO.getEntityName().trim() : null);
         customer.setPhone(customerDTO.getPhone().trim());
         customer.setCurrentBalance(customerDTO.getCurrentBalance());
 
@@ -233,6 +234,60 @@ public class CustomerService {
 
     public Page<CustomerDTO> getCustomerDTOs(Page<Customer> customer) {
         return customer.map(this::convertToDTO);
+    }
+
+    /**
+     * Get customer summary with all filters applied (without pagination)
+     * Used for summary cards that need complete data across all pages
+     */
+    @Transactional(readOnly = true)
+    public CustomerSummaryDTO getCustomerSummary(Long userId, Long shopId, String status, String searchTerm) {
+        List<Customer> filteredCustomers;
+
+        if (shopId != null && shopId > 0) {
+            // Get customers for specific shop
+            filteredCustomers = customerRepository.findByShopId(shopId);
+        } else {
+            // Get all customers for user
+            filteredCustomers = customerRepository.findAllByUserId(userId);
+        }
+
+        // Apply status filter
+        if (status != null && !status.isEmpty()) {
+            boolean isActive = "active".equalsIgnoreCase(status);
+            filteredCustomers = filteredCustomers.stream()
+                    .filter(c -> c.getIsActive() != null && c.getIsActive() == isActive)
+                    .collect(Collectors.toList());
+        }
+
+        // Apply search filter
+        if (searchTerm != null && !searchTerm.isEmpty()) {
+            String searchLower = searchTerm.toLowerCase();
+            filteredCustomers = filteredCustomers.stream()
+                    .filter(c -> c.getName().toLowerCase().contains(searchLower) ||
+                            (null != c.getEntityName() && c.getEntityName().toLowerCase().contains(searchLower)) ||
+                            c.getPhone().contains(searchTerm))
+                    .collect(Collectors.toList());
+        }
+
+        // Calculate summary
+        long totalCustomers = filteredCustomers.size();
+        long activeCustomers = filteredCustomers.stream()
+                .filter(c -> c.getIsActive() != null && c.getIsActive())
+                .count();
+        double totalOpeningBalance = filteredCustomers.stream()
+                .mapToDouble(c -> c.getOpeningBalance() != null ? c.getOpeningBalance() : 0.0)
+                .sum();
+        double totalCurrentBalance = filteredCustomers.stream()
+                .mapToDouble(c -> c.getCurrentBalance() != null ? c.getCurrentBalance() : 0.0)
+                .sum();
+
+        return CustomerSummaryDTO.builder()
+                .totalCustomers(totalCustomers)
+                .activeCustomers(activeCustomers)
+                .totalOpeningBalance(totalOpeningBalance)
+                .totalCurrentBalance(totalCurrentBalance)
+                .build();
     }
 
     /**

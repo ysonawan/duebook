@@ -27,13 +27,6 @@
             <i class="fas fa-users"></i>
             Customers
           </a>
-          <a routerLink="/suppliers"
-             routerLinkActive="bg-indigo-50 text-indigo-700"
-             [routerLinkActiveOptions]="{exact: false}"
-             class="px-4 py-2 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-100 hover:text-indigo-600 transition-colors duration-200 flex items-center gap-2">
-            <i class="fas fa-comments"></i>
-            Suppliers
-          </a>
           <a routerLink="/ledger"
              routerLinkActive="bg-indigo-50 text-indigo-700"
              [routerLinkActiveOptions]="{exact: false}"
@@ -48,6 +41,13 @@
             <i class="fas fa-store"></i>
             Shops
           </a>
+            <a routerLink="/audit-logs"
+                routerLinkActive="bg-indigo-50 text-indigo-700"
+                [routerLinkActiveOptions]="{exact: false}"
+                class="px-4 py-2 rounded-lg text-sm font-semibold text-gray-700 hover:bg-gray-100 hover:text-indigo-600 transition-colors duration-200 flex items-center gap-2">
+                <i class="fas fa-history"></i>
+                Audit Logs
+            </a>
         </div>
 
         <!-- User Menu - Desktop -->
@@ -66,12 +66,6 @@
             <!-- Dropdown Menu -->
 
             <div *ngIf="userMenuOpen" class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
-                <a routerLink="/audit-logs"
-                   (click)="closeUserMenu()"
-                   class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-2">
-                    <i class="fas fa-history"></i>
-                    Audit Logs
-                </a>
                 <a routerLink="/profile"
                  (click)="closeUserMenu()"
                  class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-2">
@@ -117,12 +111,6 @@
 
           <!-- Dropdown Menu -->
           <div *ngIf="userMenuOpen" class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
-              <a routerLink="/audit-logs"
-                 (click)="closeUserMenu()"
-                 class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-2">
-                  <i class="fas fa-history"></i>
-                  Audit Logs
-              </a>
               <a routerLink="/profile"
                (click)="closeUserMenu()"
                class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors flex items-center gap-2">
@@ -160,13 +148,6 @@
           <i class="fas fa-users text-lg"></i>
           <span class="text-xs mt-0.5">Customers</span>
         </a>
-        <a routerLink="/suppliers"
-           routerLinkActive="bg-indigo-100 text-indigo-700"
-           [routerLinkActiveOptions]="{exact: false}"
-           class="flex flex-col items-center justify-center px-2 py-1 rounded-lg text-gray-600 hover:bg-gray-100 hover:text-indigo-600 transition-all duration-200 flex-1">
-          <i class="fas fa-comments text-lg"></i>
-          <span class="text-xs mt-0.5">Suppliers</span>
-        </a>
         <a routerLink="/ledger"
            routerLinkActive="bg-indigo-100 text-indigo-700"
            [routerLinkActiveOptions]="{exact: false}"
@@ -180,6 +161,13 @@
            class="flex flex-col items-center justify-center px-2 py-1 rounded-lg text-gray-600 hover:bg-gray-100 hover:text-indigo-600 transition-all duration-200 flex-1">
           <i class="fas fa-store text-lg"></i>
           <span class="text-xs mt-0.5">Shops</span>
+        </a>
+        <a routerLink="/audit-logs"
+         routerLinkActive="bg-indigo-100 text-indigo-700"
+         [routerLinkActiveOptions]="{exact: false}"
+         class="flex flex-col items-center justify-center px-2 py-1 rounded-lg text-gray-600 hover:bg-gray-100 hover:text-indigo-600 transition-all duration-200 flex-1">
+          <i class="fas fa-history text-lg"></i>
+          <span class="text-xs mt-0.5">Audit</span>
         </a>
       </div>
     </div>

@@ -15,8 +15,6 @@ export class ProfileComponent implements OnInit {
   profile: UserProfile | null = null;
   loading = false;
   saving = false;
-  sendingReport = false;
-  sendingBudgetReport = false;
   editingBasic = false;
   basicForm = {
     name: '',
@@ -68,35 +66,6 @@ export class ProfileComponent implements OnInit {
       }
     });
   }
-
-  sendReport(): void {
-    this.sendingReport = true;
-    this.userService.sendPortfolioReport().subscribe({
-      next: () => {
-        this.sendingReport = false;
-        this.showMessage('success', 'Portfolio report has been queued and will be sent to all your email addresses shortly.');
-      },
-      error: (error) => {
-        console.error('Error sending report:', error);
-        this.sendingReport = false;
-      }
-    });
-  }
-
-  sendBudgetReport(): void {
-    this.sendingBudgetReport = true;
-    this.userService.sendBudgetReport().subscribe({
-      next: () => {
-        this.sendingBudgetReport = false;
-        this.showMessage('success', 'Budget report has been queued and will be sent to all your email addresses shortly.');
-      },
-      error: (error) => {
-        console.error('Error sending budget report:', error);
-        this.sendingBudgetReport = false;
-      }
-    });
-  }
-
 
   startEditBasic() {
     if (this.profile) {

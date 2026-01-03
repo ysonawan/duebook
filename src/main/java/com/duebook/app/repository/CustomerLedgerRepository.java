@@ -60,5 +60,8 @@ public interface CustomerLedgerRepository extends JpaRepository<CustomerLedger, 
 
     @Query("SELECT cl FROM CustomerLedger cl WHERE cl.shop.id IN :shopIds AND cl.customer.id = :customerId AND CAST(cl.entryType AS string) = :entryType AND CAST(cl.entryDate AS date) >= :startDate AND CAST(cl.entryDate AS date) <= :endDate ORDER BY cl.entryDate DESC, cl.createdAt DESC")
     Page<CustomerLedger> findByShopIdsInCustomerIdEntryTypeAndDateRangePaginated(@Param("shopIds") List<Long> shopIds, @Param("customerId") Long customerId, @Param("entryType") String entryType, @Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate, Pageable pageable);
+
+    @Query("SELECT cl FROM CustomerLedger cl WHERE cl.shop.id IN :shopIds ORDER BY cl.entryDate DESC, cl.createdAt DESC")
+    List<CustomerLedger> findByShopIdIn(@Param("shopIds") List<Long> shopIds);
 }
 

@@ -18,6 +18,7 @@ export class CustomersComponent implements OnInit {
   shops: Shop[] = [];
   loading = true;
   selectedShopId: number = 0;
+  showFilters: boolean = false;
 
   // Filters
   filterStatus: string = '';
@@ -35,11 +36,9 @@ export class CustomersComponent implements OnInit {
   totalOpeningBalance: number = 0;
   totalCurrentBalance: number = 0;
 
-  // Chart options
-  balanceDistributionChartOptions: any = {};
-  customersByShopChartOptions: any = {};
-  hasBalanceChartData = false;
-  hasShopChartData = false;
+  // Detail Modal
+  selectedCustomer: Customer | null = null;
+  showDetailModal = false;
 
   constructor(
     private customerService: CustomerService,
@@ -92,12 +91,35 @@ export class CustomersComponent implements OnInit {
         this.customers = response.content || [];
         this.totalElements = response.totalElements || 0;
         this.totalPages = response.totalPages || 0;
-        this.calculateSummaryStatistics();
+        this.loadSummary();
         this.loading = false;
       },
       error: (error) => {
         console.error('Error loading customers:', error);
         this.loading = false;
+      }
+    });
+  }
+
+  /**
+   * Load summary statistics with applied filters (all records, not paginated)
+   */
+  loadSummary(): void {
+    const shopId = this.selectedShopId || 0;
+
+    this.customerService.getCustomerSummary(
+      shopId,
+      this.filterStatus,
+      this.searchTerm
+    ).subscribe({
+      next: (summary: any) => {
+        this.totalCustomers = summary.totalCustomers || 0;
+        this.activeCustomers = summary.activeCustomers || 0;
+        this.totalOpeningBalance = summary.totalOpeningBalance || 0;
+        this.totalCurrentBalance = summary.totalCurrentBalance || 0;
+      },
+      error: (error) => {
+        console.error('Error loading customer summary:', error);
       }
     });
   }
@@ -117,16 +139,18 @@ export class CustomersComponent implements OnInit {
     this.loadCustomers();
   }
 
-  calculateSummaryStatistics(): void {
-    this.totalCustomers = this.totalElements;
-    this.activeCustomers = this.customers.filter(c => c.isActive !== false).length;
-    this.totalOpeningBalance = this.customers.reduce((sum, c) => sum + (c.openingBalance || 0), 0);
-    this.totalCurrentBalance = this.customers.reduce((sum, c) => sum + (c.currentBalance || 0), 0);
-    this.prepareCharts();
-  }
-
   addNewCustomer(): void {
     this.router.navigate(['/customers/new']);
+  }
+
+  viewDetails(customer: Customer): void {
+    this.selectedCustomer = customer;
+    this.showDetailModal = true;
+  }
+
+  closeDetailModal(): void {
+    this.showDetailModal = false;
+    this.selectedCustomer = null;
   }
 
   editCustomer(customer: Customer): void {
@@ -163,7 +187,7 @@ export class CustomersComponent implements OnInit {
   }
 
   viewLedger(customer: Customer) {
-    this.router.navigate(['/ledger'], { queryParams: { customerId: customer.id } });
+    this.router.navigate(['/ledger'], { queryParams: { customerId: customer.id, shopId: customer.shopId } });
   }
 
   getShopName(shopId: number | undefined): string {
@@ -191,137 +215,6 @@ export class CustomersComponent implements OnInit {
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
     }).format(value);
-  }
-
-  // Chart preparation methods
-  prepareCharts(): void {
-    this.prepareBalanceDistributionChart();
-    this.prepareCustomersByShopChart();
-  }
-
-  prepareBalanceDistributionChart(): void {
-    // Filter customers with balance > 0
-    const activeCustomersWithBalance = this.customers
-      .filter(c => c.currentBalance !== 0 && c.currentBalance > 0)
-      .sort((a, b) => Math.abs(b.currentBalance) - Math.abs(a.currentBalance))
-      .slice(0, 10); // Top 10 customers
-
-    const data = activeCustomersWithBalance.map((customer, index) => ({
-      name: customer.name,
-      value: Math.abs(customer.currentBalance),
-      itemStyle: { color: this.getColorForIndex(index) }
-    }));
-
-    this.hasBalanceChartData = data.length > 0;
-
-    const isMobile = window.innerWidth < 640;
-
-    this.balanceDistributionChartOptions = {
-      tooltip: {
-        trigger: 'item',
-        formatter: (params: any) => {
-          return `${params.name}<br/>Balance: ₹${params.value.toFixed(2)}`;
-        },
-        confine: true
-      },
-      legend: {
-        orient: isMobile ? 'horizontal' : 'vertical',
-        bottom: isMobile ? 0 : undefined,
-        right: isMobile ? undefined : 10,
-        top: isMobile ? undefined : 'center',
-        left: isMobile ? 'center' : undefined,
-        textStyle: { fontSize: isMobile ? 10 : 11 },
-        itemWidth: 12,
-        itemHeight: 12,
-        itemGap: isMobile ? 8 : 10,
-        padding: isMobile ? [0, 5] : [5, 5]
-      },
-      series: [
-        {
-          name: 'Customer Balance',
-          type: 'pie',
-          radius: isMobile ? '50%' : '65%',
-          center: isMobile ? ['50%', '42%'] : ['40%', '50%'],
-          data: data,
-          emphasis: {
-            itemStyle: {
-              shadowBlur: 10,
-              shadowOffsetX: 0,
-              shadowColor: 'rgba(0, 0, 0, 0.5)'
-            }
-          },
-          label: { show: false }
-        }
-      ]
-    };
-  }
-
-  prepareCustomersByShopChart(): void {
-    // For single shop, create simple distribution
-    const activeCustomers = this.customers.filter(c => c.isActive !== false).length;
-    const inactiveCustomers = this.customers.filter(c => c.isActive === false).length;
-
-    const chartData = [
-      { name: 'Active', value: activeCustomers, itemStyle: { color: '#10b981' } },
-      { name: 'Inactive', value: inactiveCustomers, itemStyle: { color: '#d1d5db' } }
-    ];
-
-    this.hasShopChartData = chartData.some(d => d.value > 0);
-
-    const isMobile = window.innerWidth < 640;
-
-    this.customersByShopChartOptions = {
-      tooltip: {
-        trigger: 'axis',
-        axisPointer: { type: 'shadow' },
-        formatter: (params: any) => {
-          if (!Array.isArray(params)) params = [params];
-          return params.map((p: any) => `${p.name}: ${p.value} customers`).join('<br/>');
-        }
-      },
-      grid: {
-        left: isMobile ? 40 : 50,
-        right: isMobile ? 10 : 20,
-        top: 20,
-        bottom: isMobile ? 40 : 50,
-        containLabel: true
-      },
-      xAxis: {
-        type: 'category',
-        data: chartData.map(d => d.name),
-        axisLabel: {
-          interval: 0,
-          rotate: isMobile ? 45 : 0,
-          fontSize: isMobile ? 10 : 11
-        }
-      },
-      yAxis: {
-        type: 'value',
-        axisLabel: { fontSize: isMobile ? 10 : 11 }
-      },
-      series: [
-        {
-          data: chartData.map(d => ({ value: d.value, itemStyle: d.itemStyle })),
-          type: 'bar',
-          itemStyle: {
-            borderRadius: [8, 8, 0, 0]
-          },
-          emphasis: {
-            focus: 'series'
-          }
-        }
-      ]
-    };
-  }
-
-  getColorForIndex(index: number): string {
-    const colors = [
-      '#FF8C00', '#0099CC', '#99CC00', '#9900CC', '#00CC99',
-      '#FF00FF', '#808080', '#00FF00', '#FF0000', '#00FFFF',
-      '#FF6600', '#9900FF', '#0000FF', '#00FF99', '#CC00FF',
-      '#CC9900', '#FF0099', '#99FF00', '#0099FF', '#CC0099'
-    ];
-    return colors[index % colors.length];
   }
 
   get pageNumbers(): number[] {

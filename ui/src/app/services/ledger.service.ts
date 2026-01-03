@@ -75,5 +75,37 @@ export class LedgerService {
 
     return this.http.get<any>(`${this.apiUrl}/shop/${shopId}/paginated`, { params });
   }
+
+  /**
+   * Get ledger summary with filters (all records, not paginated)
+   * Used for summary cards that need complete data across all pages
+   */
+  getLedgerSummary(
+    shopId: number,
+    customerId?: number,
+    entryType?: string,
+    startDate?: string,
+    endDate?: string
+  ): Observable<any> {
+    let params = new HttpParams();
+
+    if (customerId) {
+      params = params.set('customerId', customerId.toString());
+    }
+
+    if (entryType && entryType.trim()) {
+      params = params.set('entryType', entryType);
+    }
+
+    if (startDate && startDate.trim()) {
+      params = params.set('startDate', startDate);
+    }
+
+    if (endDate && endDate.trim()) {
+      params = params.set('endDate', endDate);
+    }
+
+    return this.http.get<any>(`${this.apiUrl}/shop/${shopId}/summary`, { params });
+  }
 }
 

@@ -1,6 +1,7 @@
 package com.duebook.app.controller;
 
 import com.duebook.app.dto.CustomerLedgerDTO;
+import com.duebook.app.dto.LedgerSummaryDTO;
 import com.duebook.app.service.CustomerLedgerService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -100,6 +101,40 @@ public class CustomerLedgerController {
         return ResponseEntity.ok(dtos);
     }
 
+    /**
+     * Get ledger summary for a shop with applied filters (no pagination)
+     * Used for summary cards that need complete data across all pages
+     */
+    @GetMapping("/shop/{shopId}/summary")
+    public ResponseEntity<LedgerSummaryDTO> getLedgerSummary(
+            @PathVariable Long shopId,
+            @RequestParam(required = false) Long customerId,
+            @RequestParam(required = false) String entryType,
+            @RequestParam(required = false) String startDate,
+            @RequestParam(required = false) String endDate,
+            Authentication authentication) {
+
+        Long userId = extractUserId(authentication);
+        Long actualShopId = (shopId == 0) ? null : shopId;
+
+        if (actualShopId != null) {
+            verifyUserAccessToShop(actualShopId, userId);
+        }
+
+        LocalDate startDateTime = parseDate(startDate);
+        LocalDate endDateTime = parseDate(endDate);
+
+        log.debug("Fetching ledger summary for shop ID: {} (customerId: {}, entryType: {}, startDate: {}, endDate: {}) by user ID: {}",
+                shopId, customerId, entryType, startDate, endDate, userId);
+
+        LedgerSummaryDTO summary = ledgerService.getLedgerSummary(userId, actualShopId, customerId, entryType, startDateTime, endDateTime);
+
+        log.info("Retrieved ledger summary for shop ID: {} (totalDebit: {}, totalCredit: {}, netBalance: {}, totalEntries: {})",
+                shopId, summary.getTotalDebit(), summary.getTotalCredit(), summary.getNetBalance(), summary.getTotalEntries());
+
+        return ResponseEntity.ok(summary);
+    }
+
     private LocalDate parseDate(String dateString) {
         if (dateString == null || dateString.trim().isEmpty()) {
             return null;
@@ -115,7 +150,7 @@ public class CustomerLedgerController {
 
     private Page<CustomerLedger> getFilteredLedgerEntries(List<Long> shopIds, Long customerId, String entryType,
                                                            LocalDate startDate, LocalDate endDate, Pageable pageable) {
-        boolean hasCustomer = customerId != null;
+        boolean hasCustomer = customerId != null && customerId != 0;
         boolean hasEntryType = entryType != null && !entryType.trim().isEmpty();
         boolean hasDateRange = startDate != null && endDate != null;
 
@@ -132,10 +167,10 @@ public class CustomerLedgerController {
 
     private Page<CustomerLedger> getFilteredLedgerEntriesWithDateRange(List<Long> shopIds, Long customerId, String entryType,
                                                                         LocalDate startDate, LocalDate endDate, Pageable pageable) {
-        if (customerId != null && entryType != null && !entryType.trim().isEmpty()) {
+        if (customerId != null && customerId > 0 && entryType != null && !entryType.trim().isEmpty()) {
             return customerLedgerRepository.findByShopIdsInCustomerIdEntryTypeAndDateRangePaginated(
                     shopIds, customerId, entryType, startDate, endDate, pageable);
-        } else if (customerId != null) {
+        } else if (customerId != null && customerId > 0) {
             return customerLedgerRepository.findByShopIdsInCustomerIdAndDateRangePaginated(
                     shopIds, customerId, startDate, endDate, pageable);
         } else if (entryType != null && !entryType.trim().isEmpty()) {

@@ -47,5 +47,8 @@ public interface CustomerRepository extends JpaRepository<Customer, Long> {
 
     @Query("SELECT c FROM Customer c WHERE c.shop.id IN :shopIds AND c.isActive = :isActive AND (LOWER(c.name) LIKE LOWER(CONCAT('%', :searchTerm, '%')) OR c.phone LIKE CONCAT('%', :searchTerm, '%') OR LOWER(c.entityName) LIKE LOWER(CONCAT('%', :searchTerm, '%'))) ORDER BY c.createdAt DESC")
     Page<Customer> findByShopIdsInStatusAndSearchTermPaginated(@Param("shopIds") List<Long> shopIds, @Param("isActive") boolean isActive, @Param("searchTerm") String searchTerm, Pageable pageable);
+
+    @Query("SELECT c FROM Customer c WHERE c.shop.id IN :shopIds ORDER BY c.createdAt DESC")
+    List<Customer> findByShopIdIn(@Param("shopIds") List<Long> shopIds);
 }
 

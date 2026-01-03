@@ -23,5 +23,10 @@ public interface ShopRepository extends JpaRepository<Shop, Long> {
            "WHERE su.user.id = :userId AND s.id = :shopId AND su.status = 'ACTIVE'")
     Optional<Shop> findByIdAndUserId(@Param("shopId") Long shopId, @Param("userId") Long userId);
 
+    @Query("SELECT s FROM Shop s " +
+           "INNER JOIN ShopUser su ON s.id = su.shop.id " +
+           "WHERE su.user.id = :userId AND su.status = 'ACTIVE' " +
+           "ORDER BY s.createdAt DESC")
+    List<Shop> findByUserId(@Param("userId") Long userId);
 }
 

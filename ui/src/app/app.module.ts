@@ -7,6 +7,7 @@ import { HTTP_INTERCEPTORS, provideHttpClient, withInterceptorsFromDi } from '@a
 import { provideZoneChangeDetection } from '@angular/core';
 import { NgxEchartsModule } from 'ngx-echarts';
 import { ToastrModule } from 'ngx-toastr';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
@@ -15,6 +16,7 @@ import { SignupComponent } from './components/signup/signup.component';
 import { ProfileComponent } from './components/profile/profile.component';
 import { ShopsComponent } from './components/shops/shops.component';
 import { ShopFormComponent } from './components/shop-form/shop-form.component';
+import { ShopUsersComponent } from './components/shop-users/shop-users.component';
 
 import { ShopService } from './services/shop.service';
 import { AuthService } from './services/auth.service';
@@ -37,6 +39,7 @@ import {AuditLogsComponent} from "./components/audit-logs/audit-logs.component";
         ProfileComponent,
         ShopsComponent,
         ShopFormComponent,
+        ShopUsersComponent,
         CustomersComponent,
         CustomerFormComponent,
         SuppliersComponent,
@@ -53,6 +56,7 @@ import {AuditLogsComponent} from "./components/audit-logs/audit-logs.component";
         AppRoutingModule,
         FormsModule,
         ReactiveFormsModule,
+        MatTooltipModule,
         NgxEchartsModule.forRoot({
             echarts: () => import('echarts')
         }),

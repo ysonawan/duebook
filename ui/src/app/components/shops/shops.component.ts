@@ -17,6 +17,7 @@ export class ShopsComponent implements OnInit {
     loading = true;
     filterStatus: string = 'ALL';
     searchTerm: string = '';
+    showFilters: boolean = false;
 
     // Summary statistics
     totalShops: number = 0;
@@ -79,6 +80,10 @@ export class ShopsComponent implements OnInit {
 
     editShop(shop: Shop): void {
         this.router.navigate(['/shops/edit', shop.id]);
+    }
+
+    manageUsers(shop: Shop): void {
+        this.router.navigate(['/shops', shop.id, 'users']);
     }
 
     toggleShopStatus(shop: Shop): void {

@@ -13,8 +13,22 @@
 
       <!-- Header -->
       <div class="mb-6">
-        <h1 class="text-xl md:text-2xl font-bold text-gray-700 mb-2">📚 Duebook Dashboard</h1>
-        <p class="text-gray-600 text-sm">Complete overview of customers, transactions, and business metrics</p>
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 class="text-xl md:text-2xl font-bold text-gray-700 mb-2">Duebook Dashboard</h1>
+            <p class="text-gray-600 text-sm">Complete overview of customers, transactions, and business metrics</p>
+          </div>
+          <!-- Shop Filter Dropdown -->
+          <div class="w-full sm:w-64">
+            <select
+                    [(ngModel)]="selectedShopId"
+                    (change)="onShopChange()"
+                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors text-sm font-medium">
+              <option [value]="0">All Shops</option>
+              <option *ngFor="let shop of shops" [value]="shop.id">{{ shop.name }}</option>
+            </select>
+          </div>
+        </div>
       </div>
 
       <!-- All Metrics Cards - 4 cards total, 1 per row on mobile, 2 on tablet, 4 on desktop -->
@@ -27,7 +41,7 @@
           <div class="flex items-center justify-between">
             <div class="absolute bottom-0 right-0 w-16 h-16 md:w-20 md:h-20 bg-purple-300 rounded-full -mr-8 -mb-8 md:-mr-10 md:-mb-10 opacity-20"></div>
             <div class="flex-1">
-              <p class="text-xs font-medium text-purple-700 uppercase tracking-wide">Customers - {{ activeCustomers }} active • {{ totalShops }} shops</p>
+              <p class="text-xs font-medium text-purple-700 uppercase tracking-wide">Customers • {{ activeCustomers }} active • {{ totalShops }} shops</p>
               <p class="text-2xl font-bold text-gray-700 mt-1">{{ totalCustomers }}</p>
             </div>
             <div class="bg-purple-500 p-2 rounded-lg flex-shrink-0 hidden md:block">
@@ -105,6 +119,7 @@
                   <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">Shop</th>
                   <th class="px-4 py-2 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">Amount</th>
                   <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">Progress</th>
+                    <th class="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">Action</th>
                 </tr>
               </thead>
               <tbody class="bg-white divide-y divide-gray-100">
@@ -112,16 +127,25 @@
                   <td class="px-4 py-2 text-sm  whitespace-nowrap">{{ i + 1 }}</td>
                   <td class="px-4 py-2 text-sm font-semibold  whitespace-nowrap">{{ customer.name }}</td>
                     <td class="px-4 py-2 text-sm  whitespace-nowrap">{{ customer.entityName }}</td>
-                  <td class="px-4 py-2 text-sm  whitespace-nowrap">{{ getShopName(customer.shopId || customer.shop?.id) }}</td>
+                  <td class="px-4 py-2 text-sm  whitespace-nowrap">{{ customer.shopName }}</td>
                   <td class="px-4 py-2 text-sm text-right text-orange-600 font-bold whitespace-nowrap">{{ formatCurrency(customer.currentBalance) }}</td>
                   <td class="px-4 py-2 whitespace-nowrap">
                     <div class="w-32 sm:w-48 h-3 bg-gray-100 rounded-full overflow-hidden">
                       <div class="h-3 rounded-full transition-all duration-300" [ngStyle]="{
-                        'width': ((customer.currentBalance / maxTopCustomerBalance) * 100) + '%',
+                        'width': ((customer.currentBalance / totalOverdueBaki) * 100) + '%',
                         'background': getColorForIndex(i)
                       }"></div>
                     </div>
                   </td>
+                    <td class="px-4 py-2 whitespace-nowrap text-center">
+                        <div class="flex items-center justify-center gap-2">
+                            <button (click)="viewLedger(customer.customerId, customer.shopId)"
+                                    class="text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                                    matTooltip="View Ledger">
+                                <i class="fas fa-list text-base"></i>
+                            </button>
+                        </div>
+                    </td>
                 </tr>
               </tbody>
             </table>
@@ -142,15 +166,15 @@
               <div class="flex items-center justify-between mb-5 pb-4 border-b border-gray-100">
                   <div>
                       <h2 class="text-lg sm:text-xl font-bold text-gray-700 mb-1">Entry Type Distribution</h2>
-                      <p class="text-xs sm:text-sm text-gray-500">Baki vs Paid entries</p>
+                      <p class="text-xs sm:text-sm text-gray-500">Last 30 days Baki vs Paid entries</p>
                   </div>
                   <div class="p-2.5 bg-gradient-to-br from-orange-100 to-red-100 rounded-lg">
                       <i class="fas fa-pie-chart text-orange-600 text-xl"></i>
                   </div>
               </div>
               <div class="flex items-center justify-center h-[280px] sm:h-[280px]">
-                  <div *ngIf="hasEntryTypeData && ledgerEntries.length > 0" echarts [options]="entryTypeChartOptions" class="w-full h-full"></div>
-                  <div *ngIf="!hasEntryTypeData || ledgerEntries.length === 0" class="text-center">
+                  <div *ngIf="hasEntryTypeData" echarts [options]="entryTypeChartOptions" class="w-full h-full"></div>
+                  <div *ngIf="!hasEntryTypeData" class="text-center">
                       <i class="fas fa-pie-chart text-gray-300 text-5xl mx-auto mb-3 block"></i>
                       <p class="text-gray-500 text-sm">No entry data available</p>
                   </div>
@@ -168,8 +192,8 @@
             </div>
           </div>
           <div class="flex items-center justify-center h-[280px] sm:h-[280px]">
-            <div *ngIf="hasLedgerChartData && ledgerEntries.length > 0" echarts [options]="ledgerTrendChartOptions" class="w-full h-full"></div>
-            <div *ngIf="!hasLedgerChartData || ledgerEntries.length === 0" class="text-center">
+            <div *ngIf="hasLedgerChartData" echarts [options]="ledgerTrendChartOptions" class="w-full h-full"></div>
+            <div *ngIf="!hasLedgerChartData" class="text-center">
               <i class="fas fa-chart-line text-gray-300 text-5xl mx-auto mb-3 block"></i>
               <p class="text-gray-500 text-sm">No transaction data available</p>
             </div>
@@ -188,8 +212,8 @@
             </div>
           </div>
           <div class="flex items-center justify-center h-[280px] sm:h-[280px]">
-            <div *ngIf="hasShopChartData && shops.length > 0" echarts [options]="shopDistributionChartOptions" class="w-full h-full"></div>
-            <div *ngIf="!hasShopChartData || shops.length === 0" class="text-center">
+            <div *ngIf="hasShopChartData" echarts [options]="shopDistributionChartOptions" class="w-full h-full"></div>
+            <div *ngIf="!hasShopChartData" class="text-center">
               <i class="fas fa-building text-gray-300 text-5xl mx-auto mb-3 block"></i>
               <p class="text-gray-500 text-sm">No shop data available</p>
             </div>

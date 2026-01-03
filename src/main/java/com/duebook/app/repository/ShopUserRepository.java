@@ -17,5 +17,14 @@ public interface ShopUserRepository extends JpaRepository<ShopUser, Long> {
 
     @Query("SELECT su FROM ShopUser su WHERE su.user.id = :userId AND su.status = 'ACTIVE'")
     List<ShopUser> findAllActiveByUserId(@Param("userId") Long userId);
+
+    @Query("SELECT su FROM ShopUser su WHERE su.shop.id = :shopId AND su.status = 'ACTIVE'")
+    List<ShopUser> findAllActiveByShopId(@Param("shopId") Long shopId);
+
+    @Query("SELECT su FROM ShopUser su WHERE su.shop.id = :shopId AND su.user.id = :userId AND su.role = 'OWNER'")
+    Optional<ShopUser> findOwnerByShopIdAndUserId(@Param("shopId") Long shopId, @Param("userId") Long userId);
+
+    @Query("SELECT COUNT(su) > 0 FROM ShopUser su WHERE su.shop.id = :shopId AND su.user.id = :userId")
+    boolean existsByShopIdAndUserId(@Param("shopId") Long shopId, @Param("userId") Long userId);
 }
 

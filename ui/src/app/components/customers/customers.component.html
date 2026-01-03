@@ -17,82 +17,85 @@
             </div>
 
             <!-- Filters -->
-            <div class="bg-white rounded-xl shadow-md p-6">
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <!-- Shop Selection -->
-                    <div class="space-y-2">
-                        <label class="block text-sm font-semibold text-gray-700">Shop</label>
-                        <select
-                                [(ngModel)]="selectedShopId"
-                                (change)="onShopChange()"
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors text-sm">
-                            <option [value]="0">All Shops</option>
-                            <option *ngFor="let shop of shops" [value]="shop.id">{{ shop.name }}</option>
-                        </select>
-                    </div>
+            <div class="bg-white rounded-xl shadow-md">
+                <!-- Mobile Filter Toggle Button -->
+                <div class="md:hidden p-4 border-b border-gray-200">
+                    <button
+                            (click)="showFilters = !showFilters"
+                            class="w-full flex items-center justify-between px-4 py-2 bg-indigo-50 text-indigo-700 font-semibold rounded-lg hover:bg-indigo-100 transition-colors">
+                        <span class="flex items-center gap-2">
+                            <i [ngClass]="showFilters ? 'fas fa-filter-circle-xmark' : 'fas fa-filter'"></i>
+                            {{ showFilters ? 'Hide Filters' : 'Show Filters' }}
+                        </span>
+                        <i [ngClass]="showFilters ? 'fas fa-chevron-up' : 'fas fa-chevron-down'"></i>
+                    </button>
+                </div>
 
-                    <!-- Status Filter -->
-                    <div class="space-y-2">
-                        <label class="block text-sm font-semibold text-gray-700">Filter by Status</label>
-                        <select
-                                [(ngModel)]="filterStatus"
-                                (change)="onFilterChange()"
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors text-sm">
-                            <option value="">All Customers</option>
-                            <option value="ACTIVE">Active Only</option>
-                            <option value="INACTIVE">Inactive Only</option>
-                        </select>
-                    </div>
-
-                    <!-- Search -->
-                    <div class="space-y-2">
-                        <label class="block text-sm font-semibold text-gray-700">Search</label>
-                        <div class="relative">
-                            <input
-                                type="text"
-                                [(ngModel)]="searchTerm"
-                                (input)="onSearchChange()"
-                                placeholder="Search by name or phone..."
-                                class="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors text-sm">
-                            <i class="fas fa-search text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2"></i>
+                <!-- Filter Content -->
+                <div [ngClass]="showFilters ? 'block' : 'hidden md:block'" class="p-6">
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <!-- Shop Selection -->
+                        <div class="space-y-2">
+                            <label class="block text-sm font-semibold text-gray-700">Shop</label>
+                            <select
+                                    [(ngModel)]="selectedShopId"
+                                    (change)="onShopChange()"
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors text-sm">
+                                <option [value]="0">All Shops</option>
+                                <option *ngFor="let shop of shops" [value]="shop.id">{{ shop.name }}</option>
+                            </select>
                         </div>
-                    </div>
 
-                    <!-- Clear Filters -->
-                    <div class="flex items-end">
-                        <button
-                                (click)="selectedShopId = 0; filterStatus = ''; searchTerm = ''; onFilterChange()"
-                                class="w-full px-4 py-2 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 transition-colors text-sm">
-                            Clear Filters
-                        </button>
+                        <!-- Status Filter -->
+                        <div class="space-y-2">
+                            <label class="block text-sm font-semibold text-gray-700">Filter by Status</label>
+                            <select
+                                    [(ngModel)]="filterStatus"
+                                    (change)="onFilterChange()"
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors text-sm">
+                                <option value="">All Customers</option>
+                                <option value="ACTIVE">Active Only</option>
+                                <option value="INACTIVE">Inactive Only</option>
+                            </select>
+                        </div>
+
+                        <!-- Search -->
+                        <div class="space-y-2">
+                            <label class="block text-sm font-semibold text-gray-700">Search</label>
+                            <div class="relative">
+                                <input
+                                    type="text"
+                                    [(ngModel)]="searchTerm"
+                                    (input)="onSearchChange()"
+                                    placeholder="Search by name or entity name or phone..."
+                                    class="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors text-sm">
+                                <i class="fas fa-search text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2"></i>
+                            </div>
+                        </div>
+
+                        <!-- Clear Filters -->
+                        <div class="flex items-end">
+                            <button
+                                    (click)="selectedShopId = 0; filterStatus = ''; searchTerm = ''; onFilterChange()"
+                                    class="w-full px-4 py-2 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 transition-colors text-sm">
+                                Clear Filters
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <!-- Summary Cards -->
-            <div *ngIf="!loading && customers.length > 0" class="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+            <div *ngIf="!loading && customers.length > 0" class="grid grid-cols-2 lg:grid-cols-2 gap-3 md:gap-4">
                 <!-- Total Customers Card -->
                 <div class="bg-white rounded-lg shadow-md p-4 border-l-4 border-blue-500">
                     <div class="flex items-center justify-between">
                         <div class="flex-1">
-                            <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Total Customers</p>
+                            <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Total Customers • {{ activeCustomers }} active</p>
                             <p class="text-2xl font-bold text-gray-700 mt-1">{{ totalCustomers }}</p>
                         </div>
                         <div class="bg-blue-100 p-2 rounded-lg flex-shrink-0 hidden md:block">
                             <i class="fas fa-users text-blue-600"></i>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Active Customers Card -->
-                <div class="bg-white rounded-lg shadow-md p-4 border-l-4 border-emerald-500">
-                    <div class="flex items-center justify-between">
-                        <div class="flex-1">
-                            <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Active Customers</p>
-                            <p class="text-2xl font-bold text-emerald-600 mt-1">{{ activeCustomers }}</p>
-                        </div>
-                        <div class="bg-emerald-100 p-2 rounded-lg flex-shrink-0 hidden md:block">
-                            <i class="fas fa-check-circle text-emerald-600"></i>
                         </div>
                     </div>
                 </div>
@@ -181,22 +184,28 @@
                             <td class="px-4 py-2 whitespace-nowrap text-center">
                                 <div class="flex items-center justify-center gap-2">
                                     <button
+                                            (click)="viewDetails(customer)"
+                                            class="text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                            matTooltip="View Details">
+                                        <i class="fas fa-eye text-base"></i>
+                                    </button>
+                                    <button
                                             (click)="editCustomer(customer)"
                                             class="text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                                            title="Edit">
+                                            matTooltip="Edit">
                                         <i class="fas fa-edit text-base"></i>
                                     </button>
                                     <button
                                             (click)="toggleCustomerStatus(customer)"
                                             class="transition-colors"
                                             [ngClass]="customer.isActive ? 'text-red-600 hover:bg-red-50' : 'text-emerald-600 hover:bg-emerald-50'"
-                                            [title]="customer.isActive ? 'Deactivate' : 'Activate'">
-                                        <i *ngIf="customer.isActive" class="fas fa-eye-slash text-base"></i>
-                                        <i *ngIf="!customer.isActive" class="fas fa-eye text-base"></i>
+                                            [matTooltip]="customer.isActive ? 'Deactivate' : 'Activate'">
+                                        <i *ngIf="customer.isActive" class="fas fa-ban text-base"></i>
+                                        <i *ngIf="!customer.isActive" class="fas fa-check-circle text-base"></i>
                                     </button>
                                     <button (click)="viewLedger(customer)"
                                             class="text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                                            title="View Ledger">
+                                            matTooltip="View Ledger">
                                         <i class="fas fa-list text-base"></i>
                                     </button>
                                 </div>
@@ -244,52 +253,99 @@
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
 
-            <!-- Charts Section -->
-            <div *ngIf="!loading && customers.length > 0" class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 lg:gap-6">
+    <!-- Detail Modal -->
+    <div *ngIf="showDetailModal && selectedCustomer" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <!-- Modal Header -->
+            <div class="sticky top-0 bg-white px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+                <h2 class="text-xl font-bold text-gray-700">Customer Details</h2>
+                <button
+                        (click)="closeDetailModal()"
+                        class="text-gray-400 hover:text-gray-600 transition-colors">
+                    <i class="fas fa-times text-2xl"></i>
+                </button>
+            </div>
 
-                <!-- Balance Distribution Chart -->
-                <div class="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300 p-4 sm:p-4">
-                    <div class="flex items-center justify-between mb-5 pb-4 border-b border-gray-100">
-                        <div>
-                            <h2 class="text-lg sm:text-xl font-bold text-gray-700 mb-1">Top Customers by Balance</h2>
-                            <p class="text-xs sm:text-sm text-gray-500">Top 10 customers by outstanding balance</p>
-                        </div>
-                        <div class="p-2.5 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-lg">
-                            <i class="fas fa-pie-chart text-indigo-600 text-xl"></i>
-                        </div>
+            <!-- Modal Content -->
+            <div class="p-6 space-y-6">
+                <!-- Basic Info -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pb-6 border-b border-gray-200">
+                    <div>
+                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Customer Name</p>
+                        <p class="text-sm font-bold text-gray-700">{{ selectedCustomer.name }}</p>
                     </div>
-                    <div class="flex items-center justify-center h-[280px] sm:h-[280px]">
-                        <div *ngIf="hasBalanceChartData && customers.length > 0" echarts [options]="balanceDistributionChartOptions" class="w-full h-full"></div>
-                        <div *ngIf="!hasBalanceChartData || customers.length === 0" class="text-center">
-                            <i class="fas fa-pie-chart text-gray-300 text-5xl mx-auto mb-3 block"></i>
-                            <p class="text-gray-500 text-sm">No balance data available</p>
-                        </div>
+
+                    <div>
+                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Entity Name</p>
+                        <p class="text-sm font-medium text-gray-700">{{ selectedCustomer.entityName }}</p>
+                    </div>
+
+                    <div>
+                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Phone</p>
+                        <p class="text-sm font-medium text-gray-700">{{ selectedCustomer.phone }}</p>
+                    </div>
+
+                    <div>
+                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Shop</p>
+                        <p class="text-sm font-medium text-gray-700">{{ getShopName(selectedCustomer.shopId) }}</p>
+                    </div>
+
+                    <div>
+                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Customer ID</p>
+                        <p class="text-sm font-medium text-gray-700">#{{ selectedCustomer.id }}</p>
+                    </div>
+
+                    <div>
+                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Status</p>
+                        <p class="text-sm font-medium">
+                            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium"
+                                  [ngClass]="selectedCustomer.isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-200 text-gray-600'">
+                                {{ selectedCustomer.isActive ? 'Active' : 'Inactive' }}
+                            </span>
+                        </p>
                     </div>
                 </div>
 
-                <!-- Customers by Status Chart -->
-                <div class="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300 p-4 sm:p-4">
-                    <div class="flex items-center justify-between mb-5 pb-4 border-b border-gray-100">
-                        <div>
-                            <h2 class="text-lg sm:text-xl font-bold text-gray-700 mb-1">Customers by Status</h2>
-                            <p class="text-xs sm:text-sm text-gray-500">Distribution of active and inactive customers</p>
-                        </div>
-                        <div class="p-2.5 bg-gradient-to-br from-green-100 to-emerald-100 rounded-lg">
-                            <i class="fas fa-chart-bar text-green-600 text-xl"></i>
-                        </div>
+                <!-- Balance Information -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pb-6 border-b border-gray-200">
+                    <div class="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200">
+                        <p class="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-1">Opening Balance</p>
+                        <p class="text-2xl font-bold text-blue-700">{{ formatCurrency(selectedCustomer.openingBalance) }}</p>
                     </div>
-                    <div class="flex items-center justify-center h-[280px] sm:h-[280px]">
-                        <div *ngIf="hasShopChartData && customers.length > 0" echarts [options]="customersByShopChartOptions" class="w-full h-full"></div>
-                        <div *ngIf="!hasShopChartData || customers.length === 0" class="text-center">
-                            <i class="fas fa-chart-bar text-gray-300 text-5xl mx-auto mb-3 block"></i>
-                            <p class="text-gray-500 text-sm">No status data available</p>
-                        </div>
+
+                    <div class="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-4 border border-orange-200">
+                        <p class="text-xs font-semibold text-orange-600 uppercase tracking-wide mb-1">Current Balance</p>
+                        <p class="text-2xl font-bold" [ngClass]="selectedCustomer.currentBalance && selectedCustomer.currentBalance > 0 ? 'text-red-600' : 'text-emerald-600'">
+                            {{ formatCurrency(selectedCustomer.currentBalance) }}
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Dates -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Created At</p>
+                        <p class="text-sm font-medium text-gray-700">{{ formatDate(selectedCustomer.createdAt) }}</p>
+                    </div>
+
+                    <div>
+                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Last Updated</p>
+                        <p class="text-sm font-medium text-gray-700">{{ formatDate(selectedCustomer.updatedAt) }}</p>
                     </div>
                 </div>
             </div>
 
+            <!-- Modal Footer -->
+            <div class="sticky bottom-0 bg-gray-50 px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
+                <button
+                        (click)="closeDetailModal()"
+                        class="px-6 py-2 bg-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-400 transition-colors">
+                    Close
+                </button>
+            </div>
         </div>
     </div>
 </div>
-

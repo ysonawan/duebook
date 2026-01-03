@@ -1,6 +1,7 @@
 package com.duebook.app.service;
 
 import com.duebook.app.dto.ShopDTO;
+import com.duebook.app.dto.ShopUserDTO;
 import com.duebook.app.exception.ApplicationException;
 import com.duebook.app.model.*;
 import com.duebook.app.repository.ShopRepository;
@@ -14,7 +15,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -35,7 +35,7 @@ public class ShopService {
         return shopRepository.findAllByUserIdOrderByCreatedAtDesc(userId)
                 .stream()
                 .map(this::convertToDTO)
-                .collect(Collectors.toList());
+                .toList();
     }
 
     /**
@@ -142,6 +142,168 @@ public class ShopService {
         dto.setIsActive(shop.getIsActive());
         dto.setCreatedAt(shop.getCreatedAt());
         dto.setUpdatedAt(shop.getUpdatedAt());
+        return dto;
+    }
+
+    /**
+     * Add a user to a shop with a specific role
+     */
+    public ShopUserDTO addUserToShop(Long shopId, ShopUserDTO shopUserDTO, Long currentUserId) {
+        // Verify shop exists and current user is owner
+        Shop shop = shopRepository.findById(shopId)
+                .orElseThrow(() -> new ApplicationException("Shop not found"));
+
+        shopUserRepository.findOwnerByShopIdAndUserId(shopId, currentUserId)
+                .orElseThrow(() -> new ApplicationException("You must be the shop owner to add users"));
+
+        // Find user by phone number
+        User userToAdd = userRepository.findByPhone(shopUserDTO.getUserPhone())
+                .orElseThrow(() -> new ApplicationException("User with phone " + shopUserDTO.getUserPhone() + " not found in the system"));
+
+        // Check if user already exists in shop
+        if (shopUserRepository.existsByShopIdAndUserId(shopId, userToAdd.getId())) {
+            throw new ApplicationException("This user is already a member of this shop");
+        }
+
+        // Create ShopUser relationship
+        ShopUser shopUser = new ShopUser();
+        shopUser.setShop(shop);
+        shopUser.setUser(userToAdd);
+        shopUser.setRole(shopUserDTO.getRole());
+        shopUser.setStatus(ShopUser.ShopUserStatus.ACTIVE);
+        shopUser.setJoinedAt(LocalDateTime.now());
+
+        ShopUser savedShopUser = shopUserRepository.save(shopUser);
+
+        // Audit log
+        try {
+            auditService.logAuditLongId(shopId, AuditAction.SHOP.name(), shopId, AuditAction.SHOP_UPDATED, currentUserId, null,
+                "User " + userToAdd.getName() + " added with role " + shopUserDTO.getRole());
+        } catch (Exception e) {
+            log.error("Error logging audit for adding user to shop", e);
+        }
+
+        return convertShopUserToDTO(savedShopUser, userToAdd);
+    }
+
+    /**
+     * Get all users in a shop
+     */
+    @Transactional(readOnly = true)
+    public List<ShopUserDTO> getShopUsers(Long shopId, Long currentUserId) {
+        // Verify shop exists and current user has access
+        shopRepository.findById(shopId)
+                .orElseThrow(() -> new ApplicationException("Shop not found"));
+
+        shopUserRepository.findByShopIdAndUserId(shopId, currentUserId)
+                .orElseThrow(() -> new ApplicationException("You don't have access to this shop"));
+
+        List<ShopUser> shopUsers = shopUserRepository.findAllActiveByShopId(shopId);
+        // Convert to DTOs immediately to avoid lazy loading issues after transaction ends
+        return shopUsers.stream()
+                .map(shopUser -> {
+                    User user = shopUser.getUser();
+                    return convertShopUserToDTO(shopUser, user);
+                })
+                .toList();
+    }
+
+    /**
+     * Update user role in a shop
+     */
+    public ShopUserDTO updateUserRoleInShop(Long shopId, Long shopUserId, ShopUser.ShopUserRole newRole, Long currentUserId) {
+        // Verify shop exists and current user is owner
+        shopUserRepository.findOwnerByShopIdAndUserId(shopId, currentUserId)
+                .orElseThrow(() -> new ApplicationException("You must be the shop owner to update roles"));
+
+        ShopUser shopUser = shopUserRepository.findById(shopUserId)
+                .orElseThrow(() -> new ApplicationException("Shop user not found"));
+
+        // Verify shop user belongs to this shop
+        if (!shopUser.getShop().getId().equals(shopId)) {
+            throw new ApplicationException("User does not belong to this shop");
+        }
+
+        // Cannot downgrade the only owner
+        if (shopUser.getRole() == ShopUser.ShopUserRole.OWNER && newRole != ShopUser.ShopUserRole.OWNER) {
+            List<ShopUser> owners = shopUserRepository.findAllActiveByShopId(shopId).stream()
+                    .filter(su -> su.getRole() == ShopUser.ShopUserRole.OWNER)
+                    .toList();
+            if (owners.size() == 1) {
+                throw new ApplicationException("Cannot remove the only owner from the shop");
+            }
+        }
+
+        ShopUser.ShopUserRole oldRole = shopUser.getRole();
+        shopUser.setRole(newRole);
+        ShopUser updatedShopUser = shopUserRepository.save(shopUser);
+
+        // Eagerly load user data before returning
+        User user = updatedShopUser.getUser();
+
+        // Audit log
+        try {
+            String oldValue = "{\"role\":\"" + oldRole + "\"}";
+            String newValue = "{\"role\":\"" + newRole + "\"}";
+            auditService.logAuditLongId(shopId, AuditAction.SHOP.name(), shopId, AuditAction.SHOP_UPDATED, currentUserId, oldValue, newValue);
+        } catch (Exception e) {
+            log.error("Error logging audit for role update", e);
+        }
+
+        return convertShopUserToDTO(updatedShopUser, user);
+    }
+
+    /**
+     * Remove user from shop
+     */
+    public void removeUserFromShop(Long shopId, Long shopUserId, Long currentUserId) {
+        // Verify shop exists and current user is owner
+        shopUserRepository.findOwnerByShopIdAndUserId(shopId, currentUserId)
+                .orElseThrow(() -> new ApplicationException("You must be the shop owner to remove users"));
+
+        ShopUser shopUser = shopUserRepository.findById(shopUserId)
+                .orElseThrow(() -> new ApplicationException("Shop user not found"));
+
+        // Verify shop user belongs to this shop
+        if (!shopUser.getShop().getId().equals(shopId)) {
+            throw new ApplicationException("User does not belong to this shop");
+        }
+
+        // Cannot remove the only owner
+        if (shopUser.getRole() == ShopUser.ShopUserRole.OWNER) {
+            List<ShopUser> owners = shopUserRepository.findAllActiveByShopId(shopId).stream()
+                    .filter(su -> su.getRole() == ShopUser.ShopUserRole.OWNER)
+                    .toList();
+            if (owners.size() == 1) {
+                throw new ApplicationException("Cannot remove the only owner from the shop");
+            }
+        }
+
+        shopUser.setStatus(ShopUser.ShopUserStatus.INACTIVE);
+        shopUserRepository.save(shopUser);
+
+        // Audit log
+        try {
+            auditService.logAuditLongId(shopId, AuditAction.SHOP.name(), shopId, AuditAction.SHOP_UPDATED, currentUserId, null, "User removed from shop");
+        } catch (Exception e) {
+            log.error("Error logging audit for user removal", e);
+        }
+    }
+
+    /**
+     * Convert ShopUser entity to DTO with explicit user object (avoids lazy loading)
+     */
+    private ShopUserDTO convertShopUserToDTO(ShopUser shopUser, User user) {
+        ShopUserDTO dto = new ShopUserDTO();
+        dto.setId(shopUser.getId());
+        dto.setShopId(shopUser.getShop().getId());
+        dto.setUserId(user.getId());
+        dto.setUserName(user.getName());
+        dto.setUserEmail(user.getEmail());
+        dto.setUserPhone(user.getPhone());
+        dto.setRole(shopUser.getRole());
+        dto.setStatus(shopUser.getStatus());
+        dto.setJoinedAt(shopUser.getJoinedAt());
         return dto;
     }
 }

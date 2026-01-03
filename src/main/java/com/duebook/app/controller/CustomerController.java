@@ -1,8 +1,7 @@
 package com.duebook.app.controller;
 
 import com.duebook.app.dto.CustomerDTO;
-import com.duebook.app.dto.CustomerLedgerDTO;
-import com.duebook.app.model.CustomerLedger;
+import com.duebook.app.dto.CustomerSummaryDTO;
 import com.duebook.app.service.CustomerService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -50,6 +49,20 @@ public class CustomerController {
     }
 
     /**
+     * Get a specific customer by ID
+     */
+    @GetMapping("/{id}")
+    public ResponseEntity<CustomerDTO> getCustomerById(
+            @PathVariable Long id,
+            Authentication authentication) {
+        Long userId = extractUserId(authentication);
+        log.debug("Fetching customer ID: {} for user ID: {}", id, userId);
+        CustomerDTO customer = customerService.getCustomerById(id, userId);
+        log.info("Retrieved customer ID: {} for user ID: {}", id, userId);
+        return ResponseEntity.ok(customer);
+    }
+
+    /**
      * Get paginated customers for a shop with optional filters
      * Supports filtering by status and search term
      */
@@ -91,6 +104,35 @@ public class CustomerController {
                 page, dtos.getContent().size(), accessibleShopIds, status, searchTerm);
 
         return ResponseEntity.ok(dtos);
+    }
+
+    /**
+     * Get customer summary for a shop with applied filters (no pagination)
+     * Used for summary cards that need complete data across all pages
+     */
+    @GetMapping("/shop/{shopId}/summary")
+    public ResponseEntity<CustomerSummaryDTO> getCustomerSummary(
+            @PathVariable Long shopId,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String searchTerm,
+            Authentication authentication) {
+
+        Long userId = extractUserId(authentication);
+        Long actualShopId = (shopId == 0) ? null : shopId;
+
+        if (actualShopId != null) {
+            verifyUserAccessToShop(actualShopId, userId);
+        }
+
+        log.debug("Fetching customer summary for shop ID: {} (status: {}, searchTerm: {}) by user ID: {}",
+                shopId, status, searchTerm, userId);
+
+        CustomerSummaryDTO summary = customerService.getCustomerSummary(userId, actualShopId, status, searchTerm);
+
+        log.info("Retrieved customer summary for shop ID: {} (totalCustomers: {}, activeCustomers: {}, totalCurrentBalance: {})",
+                shopId, summary.getTotalCustomers(), summary.getActiveCustomers(), summary.getTotalCurrentBalance());
+
+        return ResponseEntity.ok(summary);
     }
 
     private Page<Customer> getFilteredCustomers(List<Long> shopIds, String status, String searchTerm, Pageable pageable) {

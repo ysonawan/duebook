@@ -6,6 +6,7 @@ import { AuthGuard } from './guards/auth.guard';
 import {ProfileComponent} from "./components/profile/profile.component";
 import {ShopsComponent} from "./components/shops/shops.component";
 import {ShopFormComponent} from "./components/shop-form/shop-form.component";
+import {ShopUsersComponent} from "./components/shop-users/shop-users.component";
 import {CustomersComponent} from "./components/customers/customers.component";
 import {CustomerFormComponent} from "./components/customer-form/customer-form.component";
 import {LedgerComponent} from "./components/ledger/ledger.component";
@@ -28,6 +29,7 @@ const routes: Routes = [
   { path: 'shops', component: ShopsComponent, canActivate: [AuthGuard] },
   { path: 'shops/new', component: ShopFormComponent, canActivate: [AuthGuard] },
   { path: 'shops/edit/:id', component: ShopFormComponent, canActivate: [AuthGuard] },
+  { path: 'shops/:shopId/users', component: ShopUsersComponent, canActivate: [AuthGuard] },
   { path: 'profile', component: ProfileComponent, canActivate: [AuthGuard] },
   { path: 'audit-logs', component: AuditLogsComponent, canActivate: [AuthGuard] }
 ];

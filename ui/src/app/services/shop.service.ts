@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Shop } from '../models/shop.model';
+import { ShopUser } from '../models/shop-user.model';
 
 @Injectable({
   providedIn: 'root'
@@ -29,6 +30,23 @@ export class ShopService {
 
   deleteShop(id: number): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${id}`);
+  }
+
+  // Shop User Management Methods
+  getShopUsers(shopId: number): Observable<ShopUser[]> {
+    return this.http.get<ShopUser[]>(`${this.apiUrl}/${shopId}/users`);
+  }
+
+  addUserToShop(shopId: number, shopUser: ShopUser): Observable<ShopUser> {
+    return this.http.post<ShopUser>(`${this.apiUrl}/${shopId}/users`, shopUser);
+  }
+
+  updateUserRole(shopId: number, shopUserId: number, role: string): Observable<ShopUser> {
+    return this.http.put<ShopUser>(`${this.apiUrl}/${shopId}/users/${shopUserId}/role`, { role });
+  }
+
+  removeUserFromShop(shopId: number, shopUserId: number): Observable<void> {
+    return this.http.delete<void>(`${this.apiUrl}/${shopId}/users/${shopUserId}`);
   }
 }
 

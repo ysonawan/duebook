@@ -11,71 +11,87 @@
             </div>
 
             <!-- Filters -->
-            <div class="bg-white rounded-xl shadow-md p-6">
-                <div class="grid grid-cols-1 md:grid-cols-6 gap-4">
-                    <!-- Shop Filter -->
-                    <div class="space-y-2">
-                        <label class="block text-sm font-semibold text-gray-700">Shop</label>
-                        <select
-                                [(ngModel)]="selectedShopId"
-                                (change)="onShopChange()"
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors text-sm">
-                            <option [value]="0">All Shops</option>
-                            <option *ngFor="let shop of shops" [value]="shop.id">{{ shop.name }}</option>
-                        </select>
-                    </div>
+            <div class="bg-white rounded-xl shadow-md">
+                <!-- Mobile Filter Toggle Button -->
+                <div class="md:hidden p-4 border-b border-gray-200">
+                    <button
+                            (click)="showFilters = !showFilters"
+                            class="w-full flex items-center justify-between px-4 py-2 bg-indigo-50 text-indigo-700 font-semibold rounded-lg hover:bg-indigo-100 transition-colors">
+                        <span class="flex items-center gap-2">
+                            <i [ngClass]="showFilters ? 'fas fa-filter-circle-xmark' : 'fas fa-filter'"></i>
+                            {{ showFilters ? 'Hide Filters' : 'Show Filters' }}
+                        </span>
+                        <i [ngClass]="showFilters ? 'fas fa-chevron-up' : 'fas fa-chevron-down'"></i>
+                    </button>
+                </div>
 
-                    <!-- Action Filter -->
-                    <div class="space-y-2">
-                        <label class="block text-sm font-semibold text-gray-700">Action</label>
-                        <select
-                                [(ngModel)]="filterAction"
-                                (change)="onFilterChange()"
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors text-sm">
-                            <option value="">All Actions</option>
-                            <option *ngFor="let action of availableActions" [value]="action">{{ action }}</option>
-                        </select>
-                    </div>
+                <!-- Filter Content -->
+                <div [ngClass]="showFilters ? 'block' : 'hidden md:block'" class="p-6">
+                    <div class="grid grid-cols-1 md:grid-cols-6 gap-4">
+                        <!-- Shop Filter -->
+                        <div class="space-y-2">
+                            <label class="block text-sm font-semibold text-gray-700">Shop</label>
+                            <select
+                                    [(ngModel)]="selectedShopId"
+                                    (change)="onShopChange()"
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors text-sm">
+                                <option [value]="0">All Shops</option>
+                                <option *ngFor="let shop of shops" [value]="shop.id">{{ shop.name }}</option>
+                            </select>
+                        </div>
 
-                    <!-- Entity Type Filter -->
-                    <div class="space-y-2">
-                        <label class="block text-sm font-semibold text-gray-700">Entity Type</label>
-                        <select
-                                [(ngModel)]="filterEntityType"
-                                (change)="onFilterChange()"
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors text-sm">
-                            <option value="">All Types</option>
-                            <option *ngFor="let type of availableEntityTypes" [value]="type">{{ type }}</option>
-                        </select>
-                    </div>
+                        <!-- Action Filter -->
+                        <div class="space-y-2">
+                            <label class="block text-sm font-semibold text-gray-700">Action</label>
+                            <select
+                                    [(ngModel)]="filterAction"
+                                    (change)="onFilterChange()"
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors text-sm">
+                                <option value="">All Actions</option>
+                                <option *ngFor="let action of availableActions" [value]="action">{{ action }}</option>
+                            </select>
+                        </div>
 
-                    <!-- Start Date Filter -->
-                    <div class="space-y-2">
-                        <label class="block text-sm font-semibold text-gray-700">Start Date</label>
-                        <input
-                                type="date"
-                                [(ngModel)]="startDate"
-                                (change)="onFilterChange()"
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors text-sm">
-                    </div>
+                        <!-- Entity Type Filter -->
+                        <div class="space-y-2">
+                            <label class="block text-sm font-semibold text-gray-700">Entity Type</label>
+                            <select
+                                    [(ngModel)]="filterEntityType"
+                                    (change)="onFilterChange()"
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors text-sm">
+                                <option value="">All Types</option>
+                                <option *ngFor="let type of availableEntityTypes" [value]="type">{{ type }}</option>
+                            </select>
+                        </div>
 
-                    <!-- End Date Filter -->
-                    <div class="space-y-2">
-                        <label class="block text-sm font-semibold text-gray-700">End Date</label>
-                        <input
-                                type="date"
-                                [(ngModel)]="endDate"
-                                (change)="onFilterChange()"
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors text-sm">
-                    </div>
+                        <!-- Start Date Filter -->
+                        <div class="space-y-2">
+                            <label class="block text-sm font-semibold text-gray-700">Start Date</label>
+                            <input
+                                    type="date"
+                                    [(ngModel)]="startDate"
+                                    (change)="onFilterChange()"
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors text-sm">
+                        </div>
 
-                    <!-- Clear Filters -->
-                    <div class="flex items-end">
-                        <button
-                                (click)="selectedShopId = 0; filterAction = ''; filterEntityType = ''; startDate = ''; endDate = ''; onFilterChange()"
-                                class="w-full px-4 py-2 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 transition-colors text-sm">
-                            Clear Filters
-                        </button>
+                        <!-- End Date Filter -->
+                        <div class="space-y-2">
+                            <label class="block text-sm font-semibold text-gray-700">End Date</label>
+                            <input
+                                    type="date"
+                                    [(ngModel)]="endDate"
+                                    (change)="onFilterChange()"
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors text-sm">
+                        </div>
+
+                        <!-- Clear Filters -->
+                        <div class="flex items-end">
+                            <button
+                                    (click)="selectedShopId = 0; filterAction = ''; filterEntityType = ''; startDate = ''; endDate = ''; onFilterChange()"
+                                    class="w-full px-4 py-2 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 transition-colors text-sm">
+                                Clear Filters
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -135,7 +151,7 @@
                                 <button
                                         (click)="viewDetails(log)"
                                         class="text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                        title="View entry details">
+                                        matTooltip="View Entry Details">
                                     <i class="fas fa-eye text-base"></i>
                                 </button>
                             </td>

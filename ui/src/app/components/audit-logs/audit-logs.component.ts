@@ -17,6 +17,7 @@ export class AuditLogsComponent implements OnInit {
   loading = true;
   shops: Shop[] = [];
   selectedShopId: number = 0;
+  showFilters: boolean = false;
 
   // Filters
   filterAction: string = '';
@@ -47,16 +48,6 @@ export class AuditLogsComponent implements OnInit {
   ngOnInit(): void {
     this.loadFilterOptions();
     this.loadShops();
-    this.setDefaultDateRange();
-  }
-
-  setDefaultDateRange(): void {
-    const today = new Date();
-    const firstDay = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate());
-    const lastDay = today;
-
-    this.startDate = firstDay.toISOString().split('T')[0];
-    this.endDate = lastDay.toISOString().split('T')[0];
   }
 
   loadShops(): void {
@@ -109,7 +100,6 @@ export class AuditLogsComponent implements OnInit {
     this.filterEntityType = '';
     this.startDate = '';
     this.endDate = '';
-    this.setDefaultDateRange();
     this.loadAuditLogs();
   }
 

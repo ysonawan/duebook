@@ -21,9 +21,10 @@ export class LedgerComponent implements OnInit {
   shops: Shop[] = [];
   loading = true;
   selectedShopId: number = 0;
+  showFilters: boolean = false;
 
   // Filters
-  filterCustomer: number | null = null;
+  filterCustomer: number = 0;
   filterType: string = '';
   startDate: string = '';
   endDate: string = '';
@@ -40,6 +41,10 @@ export class LedgerComponent implements OnInit {
   netBalance: number = 0;
   totalEntries: number = 0;
 
+  // Detail Modal
+  selectedEntry: CustomerLedger | null = null;
+  showDetailModal = false;
+
   constructor(
     private ledgerService: LedgerService,
     private customerService: CustomerService,
@@ -50,32 +55,24 @@ export class LedgerComponent implements OnInit {
   ) {}
 
   ngOnInit(): void {
+    // Set selected shop to "All Shops" by default (null)
+    this.selectedShopId = 0;
     this.route.queryParams.subscribe(params => {
       if (params['customerId']) {
         this.filterCustomer = params['customerId'];
       }
+      if (params['shopId']) {
+        this.selectedShopId = params['shopId'];
+      }
     });
     this.loadShops();
     this.loadCustomers();
-    this.setDefaultDateRange();
-  }
-
-  setDefaultDateRange(): void {
-    const today = new Date();
-    const firstDay = new Date(today.getFullYear(), today.getMonth() - 1, today.getDate());
-    const lastDay = today;
-
-    this.startDate = firstDay.toISOString().split('T')[0];
-    this.endDate = lastDay.toISOString().split('T')[0];
   }
 
   loadShops(): void {
     this.shopService.getAllShops().subscribe({
       next: (shops) => {
         this.shops = shops.filter(s => s.isActive !== false);
-
-        // Set selected shop to "All Shops" by default (null)
-        this.selectedShopId = 0;
         this.loadLedgerEntries();
       },
       error: (error) => {
@@ -98,11 +95,10 @@ export class LedgerComponent implements OnInit {
 
   onShopChange(): void {
     this.currentPage = 0;
-    this.filterCustomer = null;
+    this.filterCustomer = 0;
     this.filterType = '';
     this.startDate = '';
     this.endDate = '';
-    this.setDefaultDateRange();
     this.loadLedgerEntries();
   }
 
@@ -125,12 +121,37 @@ export class LedgerComponent implements OnInit {
         this.ledgerEntries = response.content || [];
         this.totalElements = response.totalElements || 0;
         this.totalPages = response.totalPages || 0;
-        this.calculateSummaryStatistics();
+        this.loadLedgerSummary();
         this.loading = false;
       },
       error: (error) => {
         console.error('Error loading ledger entries:', error);
         this.loading = false;
+      }
+    });
+  }
+
+  /**
+   * Load ledger summary with applied filters (all records, not paginated)
+   */
+  loadLedgerSummary(): void {
+    const shopId = this.selectedShopId || 0;
+
+    this.ledgerService.getLedgerSummary(
+      shopId,
+      this.filterCustomer || undefined,
+      this.filterType,
+      this.startDate,
+      this.endDate
+    ).subscribe({
+      next: (summary: any) => {
+        this.totalDebit = summary.totalDebit || 0;
+        this.totalCredit = summary.totalCredit || 0;
+        this.netBalance = summary.netBalance || 0;
+        this.totalEntries = summary.totalEntries || 0;
+      },
+      error: (error) => {
+        console.error('Error loading ledger summary:', error);
       }
     });
   }
@@ -145,82 +166,14 @@ export class LedgerComponent implements OnInit {
     this.loadLedgerEntries();
   }
 
-  calculateSummaryStatistics(): void {
-    // Get all entry IDs that have been reversed
-    const reversedEntryIds: number[] = this.ledgerEntries
-      .filter(e => e.entryType === LedgerEntryType.REVERSAL)
-      .map(e => e.referenceEntryId)
-      .filter((id): id is number => id !== undefined);
-
-    // Filter out reversed entries and reversals themselves
-    const effectiveEntries = this.ledgerEntries.filter(e =>
-      !reversedEntryIds.includes(e.id!) && e.entryType !== LedgerEntryType.REVERSAL
-    );
-
-    // Calculate based on entry type, excluding reversals and reversed entries
-    this.totalDebit = effectiveEntries
-      .filter(e => e.entryType === LedgerEntryType.BAKI)
-      .reduce((sum, e) => sum + (e.amount || 0), 0);
-
-    this.totalCredit = effectiveEntries
-      .filter(e => e.entryType === LedgerEntryType.PAID)
-      .reduce((sum, e) => sum + (e.amount || 0), 0);
-
-    this.netBalance = this.totalDebit - this.totalCredit;
-    this.totalEntries = effectiveEntries.length;
+  viewLedgerEntry(entry: CustomerLedger): void {
+    this.selectedEntry = entry;
+    this.showDetailModal = true;
   }
 
-  viewLedgerEntry(entry: CustomerLedger): void {
-    Swal.fire({
-      title: 'Ledger Entry Details',
-      html: `
-        <div class="text-left space-y-4">
-          <div class="grid grid-cols-2 gap-4">
-            <div class="space-y-2">
-              <p class="text-xs font-medium text-gray-500 uppercase">ID</p>
-              <p class="text-sm font-semibold text-gray-700">${entry.id || 'N/A'}</p>
-            </div>
-            <div class="space-y-2">
-              <p class="text-xs font-medium text-gray-500 uppercase">Entry Date</p>
-              <p class="text-sm font-semibold text-gray-700">${this.formatDate(entry.entryDate)}</p>
-            </div>
-            <div class="space-y-2">
-              <p class="text-xs font-medium text-gray-500 uppercase">Customer</p>
-              <p class="text-sm font-semibold text-gray-700">${this.getCustomerName(entry.customerId)}</p>
-            </div>
-            <div class="space-y-2">
-              <p class="text-xs font-medium text-gray-500 uppercase">Shop</p>
-              <p class="text-sm font-semibold text-gray-700">${this.getShopName(entry.shopId)}</p>
-            </div>
-            <div class="space-y-2">
-              <p class="text-xs font-medium text-gray-500 uppercase">Entry Type</p>
-              <p class="text-sm font-semibold text-gray-700">${entry.entryType}</p>
-            </div>
-            <div class="space-y-2">
-              <p class="text-xs font-medium text-gray-500 uppercase">Amount</p>
-              <p class="text-sm font-semibold text-gray-700">${this.formatCurrency(entry.amount)}</p>
-            </div>
-            <div class="space-y-2">
-              <p class="text-xs font-medium text-gray-500 uppercase">Balance After</p>
-              <p class="text-sm font-semibold text-gray-700">${this.formatCurrency(entry.balanceAfter)}</p>
-            </div>
-            <div class="space-y-2">
-              <p class="text-xs font-medium text-gray-500 uppercase">Reference Entry ID</p>
-              <p class="text-sm font-semibold text-gray-700">${entry.referenceEntryId || '-'}</p>
-            </div>
-          </div>
-          ${entry.notes ? `
-            <div class="space-y-2 border-t pt-4">
-              <p class="text-xs font-medium text-gray-500 uppercase">Notes</p>
-              <p class="text-sm text-gray-700 bg-gray-50 p-3 rounded">${entry.notes}</p>
-            </div>
-          ` : ''}
-        </div>
-      `,
-      icon: 'info',
-      confirmButtonText: 'Close',
-      width: 600
-    });
+  closeDetailModal(): void {
+    this.showDetailModal = false;
+    this.selectedEntry = null;
   }
 
   hasBeenReversed(entryId: number | undefined): boolean {
@@ -321,6 +274,10 @@ export class LedgerComponent implements OnInit {
 
   formatDate(date: Date): string {
     return this.timezoneService.formatDateOnlyInIndiaTimezone(date, {});
+  }
+
+  formatDateTime(date: Date): string {
+    return this.timezoneService.formatDateInIndiaTimezone(date, {});
   }
 
   formatCurrency(value: number | undefined): string {

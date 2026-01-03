@@ -1,11 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
-import { CustomerService } from '../../services/customer.service';
-import { LedgerService } from '../../services/ledger.service';
+import { DashboardService, DashboardMetricsDTO, TopCustomerDTO, ShopDistributionDTO, DailyTransactionTrendDTO, EntryTypeDistributionDTO, PaymentHealthMetricsDTO } from '../../services/dashboard.service';
 import { ShopService } from '../../services/shop.service';
-import { Customer } from '../../models/customer.model';
-import { CustomerLedger, LedgerEntryType } from '../../models/ledger.model';
 import { Shop } from '../../models/shop.model';
+
 
 @Component({
   selector: 'app-dashboard-duebook',
@@ -14,16 +12,17 @@ import { Shop } from '../../models/shop.model';
   standalone: false
 })
 export class DashboardDuebookComponent implements OnInit {
-  // Data
-  customers: Customer[] = [];
-  ledgerEntries: CustomerLedger[] = [];
-  shops: Shop[] = [];
+  // Loading state
   loading = true;
+
+  // Shop Filter
+  shops: Shop[] = [];
+  selectedShopId: number = 0;
 
   // Customer Metrics
   totalCustomers: number = 0;
   activeCustomers: number = 0;
-  totalCustomerBalance: number = 0;
+  totalShops: number = 0;
 
   // Ledger Metrics
   totalDebit: number = 0;
@@ -32,198 +31,115 @@ export class DashboardDuebookComponent implements OnInit {
   totalTransactions: number = 0;
   averageTransactionValue: number = 0;
 
-  // Shop Metrics
-  totalShops: number = 0;
+  // Additional Metrics
+  averageCustomerBalance: number = 0;
+  overdueBakiCount: number = 0;
+  totalOverdueBaki: number = 0;
+  paymentHealthMetrics: PaymentHealthMetricsDTO | null = null;
 
   // Chart Options
-  customerBalanceChartOptions: any = {};
   ledgerTrendChartOptions: any = {};
   shopDistributionChartOptions: any = {};
   entryTypeChartOptions: any = {};
 
   // Chart Visibility
-  hasCustomerChartData = false;
   hasLedgerChartData = false;
   hasShopChartData = false;
   hasEntryTypeData = false;
 
   // Top Customers
-  topCustomers: Customer[] = [];
+  topCustomers: TopCustomerDTO[] = [];
   maxTopCustomerBalance: number = 0;
 
+  // Chart data
+  shopDistribution: ShopDistributionDTO[] = [];
+  transactionTrend: DailyTransactionTrendDTO[] = [];
+  entryTypeDistribution: EntryTypeDistributionDTO | null = null;
+
   constructor(
-    private customerService: CustomerService,
-    private ledgerService: LedgerService,
+    private dashboardService: DashboardService,
     private shopService: ShopService,
     private router: Router
   ) {}
 
   ngOnInit(): void {
-    this.loadAllData();
+    this.loadShops();
   }
 
-  loadAllData(): void {
-    this.loading = true;
-
-    this.customerService.getAllCustomers().subscribe({
-      next: (customers) => {
-        this.customers = customers;
-        this.calculateCustomerMetrics();
-        this.prepareCustomerBalanceChart();
-        this.prepareTopCustomers();
-      },
-      error: (err) => {
-        console.error('Error loading customers:', err);
-      }
-    });
-
-    this.ledgerService.getAllLedgerEntries().subscribe({
-      next: (entries) => {
-        this.ledgerEntries = entries;
-        this.calculateLedgerMetrics();
-        this.prepareLedgerTrendChart();
-        this.prepareEntryTypeChart();
-      },
-      error: (err) => {
-        console.error('Error loading ledger:', err);
-      }
-    });
-
+  loadShops(): void {
     this.shopService.getAllShops().subscribe({
       next: (shops) => {
-        this.shops = shops.filter(s => s.isActive !== false);
-        this.totalShops = this.shops.length;
-        this.prepareShopDistributionChart();
+        this.shops = shops;
+        this.loadDashboardMetrics();
       },
-      error: (err) => {
-        console.error('Error loading shops:', err);
+      error: (error) => {
+        console.error('Error loading shops:', error);
+        this.loading = false;
       }
     });
-    this.loading = false;
-  }
-  calculateCustomerMetrics(): void {
-    this.totalCustomers = this.customers.length;
-    this.activeCustomers = this.customers.filter(c => c.isActive !== false).length;
-    this.totalCustomerBalance = this.customers.reduce((sum, c) => sum + (c.currentBalance || 0), 0);
   }
 
-  calculateLedgerMetrics(): void {
-    // Get all entry IDs that have been reversed
-    const reversedEntryIds: number[] = this.ledgerEntries
-      .filter(e => e.entryType === LedgerEntryType.REVERSAL)
-      .map(e => e.referenceEntryId)
-      .filter((id): id is number => id !== undefined);
-
-    // Filter out reversed entries and reversals themselves
-    const effectiveEntries = this.ledgerEntries.filter(e =>
-      !reversedEntryIds.includes(e.id!) && e.entryType !== LedgerEntryType.REVERSAL
-    );
-
-    this.totalDebit = effectiveEntries
-      .filter(e => e.entryType === LedgerEntryType.BAKI)
-      .reduce((sum, e) => sum + e.amount, 0);
-
-    this.totalCredit = effectiveEntries
-      .filter(e => e.entryType === LedgerEntryType.PAID)
-      .reduce((sum, e) => sum + e.amount, 0);
-
-    this.netBalance = this.totalDebit - this.totalCredit;
-    this.totalTransactions = effectiveEntries.length;
-
-    if (effectiveEntries.length > 0) {
-      this.averageTransactionValue = (this.totalDebit + this.totalCredit) / effectiveEntries.length;
-    }
+  onShopChange(): void {
+    this.loadDashboardMetrics();
   }
 
-  prepareCustomerBalanceChart(): void {
-    // Top 5 customers by balance
-    const topCustomers = [...this.customers]
-      .filter(c => c.currentBalance !== 0)
-      .sort((a, b) => Math.abs(b.currentBalance) - Math.abs(a.currentBalance))
-      .slice(0, 5);
+  viewLedger(customerId: number, shopId: number | undefined): void {
+    this.router.navigate(['/ledger'], { queryParams: { customerId: customerId, shopId: shopId } });
+  }
 
-    if (topCustomers.length === 0) {
-      this.hasCustomerChartData = false;
-      return;
-    }
+  loadDashboardMetrics(): void {
+    this.loading = true;
 
-    const data = topCustomers.map((customer, index) => ({
-      name: customer.name,
-      value: Math.abs(customer.currentBalance),
-      itemStyle: { color: this.getColorForIndex(index) }
-    }));
+    const metricsCall = Number(this.selectedShopId) === 0
+      ? this.dashboardService.getDashboardMetrics()
+      : this.dashboardService.getDashboardMetricsByShop(this.selectedShopId);
 
-    this.hasCustomerChartData = true;
-    const isMobile = window.innerWidth < 640;
+    metricsCall.subscribe({
+      next: (metrics: DashboardMetricsDTO) => {
+        // Set all metrics from backend
+        this.totalCustomers = metrics.totalCustomers;
+        this.activeCustomers = metrics.activeCustomers;
+        this.totalShops = metrics.totalShops;
 
-    this.customerBalanceChartOptions = {
-      tooltip: {
-        trigger: 'axis',
-        axisPointer: { type: 'shadow' },
-        formatter: (params: any) => {
-          if (!Array.isArray(params)) params = [params];
-          return params.map((p: any) => `${p.name}: ₹${p.value.toLocaleString('en-IN')}`).join('<br/>');
-        }
+        this.totalDebit = metrics.totalDebit;
+        this.totalCredit = metrics.totalCredit;
+        this.netBalance = metrics.netBalance;
+        this.totalTransactions = metrics.totalTransactions;
+        this.averageTransactionValue = metrics.averageTransactionValue;
+
+        this.averageCustomerBalance = metrics.averageCustomerBalance;
+        this.overdueBakiCount = metrics.overdueBakiCount;
+        this.totalOverdueBaki = metrics.totalOverdueBaki;
+        this.paymentHealthMetrics = metrics.paymentHealthMetrics;
+
+        // Set top customers
+        this.topCustomers = metrics.topCustomers;
+        this.maxTopCustomerBalance = this.topCustomers.length > 0 ? this.topCustomers[0].currentBalance : 1;
+
+        // Set chart data
+        this.transactionTrend = metrics.transactionTrend;
+        this.shopDistribution = metrics.shopDistribution;
+        this.entryTypeDistribution = metrics.entryTypeDistribution;
+
+        // Prepare charts
+        this.prepareLedgerTrendChart();
+        this.prepareShopDistributionChart();
+        this.prepareEntryTypeChart();
+
+        this.loading = false;
       },
-      grid: {
-        left: isMobile ? 40 : 50,
-        right: isMobile ? 10 : 20,
-        top: 20,
-        bottom: isMobile ? 40 : 50,
-        containLabel: true
-      },
-      xAxis: {
-        type: 'category',
-        data: data.map(d => d.name),
-        axisLabel: {
-          rotate: isMobile ? 45 : 0,
-          fontSize: isMobile ? 10 : 11
-        }
-      },
-      yAxis: {
-        type: 'value',
-        axisLabel: { fontSize: isMobile ? 10 : 11 }
-      },
-      series: [
-        {
-          data: data.map(d => ({ value: d.value, itemStyle: d.itemStyle })),
-          type: 'bar',
-          itemStyle: { borderRadius: [8, 8, 0, 0] },
-          emphasis: { focus: 'series' }
-        }
-      ]
-    };
+      error: (err) => {
+        console.error('Error loading dashboard metrics:', err);
+        this.loading = false;
+      }
+    });
   }
 
   prepareLedgerTrendChart(): void {
-    // Get daily debit and credit totals
-    const dailyData = new Map<string, { debit: number; credit: number }>();
-
-    const reversedEntryIds: number[] = this.ledgerEntries
-      .filter(e => e.entryType === LedgerEntryType.REVERSAL)
-      .map(e => e.referenceEntryId)
-      .filter((id): id is number => id !== undefined);
-
-    const effectiveEntries = this.ledgerEntries.filter(e =>
-      !reversedEntryIds.includes(e.id!) && e.entryType !== LedgerEntryType.REVERSAL
-    );
-
-    effectiveEntries.forEach(entry => {
-      const date = new Date(entry.entryDate).toLocaleDateString();
-      if (!dailyData.has(date)) {
-        dailyData.set(date, { debit: 0, credit: 0 });
-      }
-      const data = dailyData.get(date)!;
-      if (entry.entryType === LedgerEntryType.BAKI) {
-        data.debit += entry.amount;
-      } else {
-        data.credit += entry.amount;
-      }
-    });
-
-    const dates = Array.from(dailyData.keys()).sort().slice(-30); // Last 30 days
-    const debits = dates.map(date => dailyData.get(date)!.debit);
-    const credits = dates.map(date => dailyData.get(date)!.credit);
+    // Data is already computed on backend, just format for chart
+    const dates = this.transactionTrend.map(t => t.date);
+    const debits = this.transactionTrend.map(t => t.debitAmount);
+    const credits = this.transactionTrend.map(t => t.creditAmount);
 
     this.hasLedgerChartData = dates.length > 0;
 
@@ -283,22 +199,10 @@ export class DashboardDuebookComponent implements OnInit {
   }
 
   prepareShopDistributionChart(): void {
-    const shopCounts = new Map<number, { name: string; count: number }>();
-
-    this.customers.forEach(customer => {
-      const shopId = customer.shopId || 0;
-      const shopName = this.getShopName(customer.shopId);
-
-      if (!shopCounts.has(shopId)) {
-        shopCounts.set(shopId, { name: shopName, count: 0 });
-      }
-      const shop = shopCounts.get(shopId)!;
-      shop.count++;
-    });
-
-    const chartData = Array.from(shopCounts.values()).map((shop, index) => ({
-      name: shop.name,
-      value: shop.count,
+    // Data is already computed on backend
+    const chartData = this.shopDistribution.map((shop, index) => ({
+      name: shop.shopName,
+      value: shop.customerCount,
       itemStyle: { color: this.getColorForIndex(index) }
     }));
 
@@ -346,21 +250,10 @@ export class DashboardDuebookComponent implements OnInit {
   }
 
   prepareEntryTypeChart(): void {
-    const reversedEntryIds: number[] = this.ledgerEntries
-      .filter(e => e.entryType === LedgerEntryType.REVERSAL)
-      .map(e => e.referenceEntryId)
-      .filter((id): id is number => id !== undefined);
-
-    const effectiveEntries = this.ledgerEntries.filter(e =>
-      !reversedEntryIds.includes(e.id!) && e.entryType !== LedgerEntryType.REVERSAL
-    );
-
-    const debitCount = effectiveEntries.filter(e => e.entryType === LedgerEntryType.BAKI).length;
-    const creditCount = effectiveEntries.filter(e => e.entryType === LedgerEntryType.PAID).length;
-
+    // Data is already computed on backend
     const data = [
-      { name: 'Baki (Debit)', value: debitCount, itemStyle: { color: '#FF6B6B' } },
-      { name: 'Paid (Credit)', value: creditCount, itemStyle: { color: '#51CF66' } }
+      { name: 'Baki (Debit)', value: this.entryTypeDistribution?.bakiCount || 0, itemStyle: { color: '#FF6B6B' } },
+      { name: 'Paid (Credit)', value: this.entryTypeDistribution?.paidCount || 0, itemStyle: { color: '#51CF66' } }
     ].filter(d => d.value > 0);
 
     this.hasEntryTypeData = data.length > 0;
@@ -403,19 +296,10 @@ export class DashboardDuebookComponent implements OnInit {
     };
   }
 
-  prepareTopCustomers(): void {
-    // Top 10 customers with highest positive balance (Baki)
-    const sorted = [...this.customers]
-      .filter(c => c.currentBalance && c.currentBalance > 0)
-      .sort((a, b) => (b.currentBalance || 0) - (a.currentBalance || 0));
-    this.topCustomers = sorted.slice(0, 10);
-    this.maxTopCustomerBalance = this.topCustomers.length > 0 ? this.topCustomers[0].currentBalance || 1 : 1;
-  }
-
   getShopName(shopId: number | undefined): string {
     if (!shopId) return 'N/A';
-    const shop = this.shops.find(s => s.id === shopId);
-    return shop?.name || 'N/A';
+    const shop = this.shopDistribution.find(s => s.shopId === shopId);
+    return shop?.shopName || 'N/A';
   }
 
   getColorForIndex(index: number): string {
@@ -458,3 +342,4 @@ export class DashboardDuebookComponent implements OnInit {
     this.router.navigate(['/shops']);
   }
 }
+
