@@ -77,12 +77,7 @@ public class ShopService {
         shopUserRepository.save(shopUser);
 
         // Audit log: Shop created
-        try {
-            String newValue = objectMapper.writeValueAsString(convertToDTO(savedShop));
-            auditService.logAuditLongId(savedShop.getId(), AuditAction.SHOP.name(), savedShop.getId(), AuditAction.SHOP_CREATED, userId, null, newValue);
-        } catch (Exception e) {
-            log.error("Error logging audit for shop creation", e);
-        }
+        logShopAudit(savedShop.getId(), AuditAction.SHOP_CREATED, userId, null, convertToDTO(savedShop));
 
         return convertToDTO(savedShop);
     }
@@ -104,12 +99,7 @@ public class ShopService {
         }
 
         // Store old value for audit
-        String oldValue = null;
-        try {
-            oldValue = objectMapper.writeValueAsString(convertToDTO(shop));
-        } catch (Exception e) {
-            log.error("Error serializing old shop value for audit", e);
-        }
+        ShopDTO oldShopDTO = convertToDTO(shop);
 
         shop.setName(shopDTO.getName().trim());
         shop.setAddress(shopDTO.getAddress() != null ? shopDTO.getAddress().trim() : null);
@@ -121,12 +111,7 @@ public class ShopService {
         Shop updatedShop = shopRepository.save(shop);
 
         // Audit log: Shop updated
-        try {
-            String newValue = objectMapper.writeValueAsString(convertToDTO(updatedShop));
-            auditService.logAuditLongId(shopId, AuditAction.SHOP.name(), shopId, AuditAction.SHOP_UPDATED, userId, oldValue, newValue);
-        } catch (Exception e) {
-            log.error("Error logging audit for shop update", e);
-        }
+        logShopAudit(shopId, AuditAction.SHOP_UPDATED, userId, oldShopDTO, convertToDTO(updatedShop));
 
         return convertToDTO(updatedShop);
     }
@@ -148,6 +133,7 @@ public class ShopService {
     /**
      * Add a user to a shop with a specific role
      */
+    @Transactional
     public ShopUserDTO addUserToShop(Long shopId, ShopUserDTO shopUserDTO, Long currentUserId) {
         // Verify shop exists and current user is owner
         Shop shop = shopRepository.findById(shopId)
@@ -174,16 +160,11 @@ public class ShopService {
         shopUser.setJoinedAt(LocalDateTime.now());
 
         ShopUser savedShopUser = shopUserRepository.save(shopUser);
-
+        ShopUserDTO resultDTO = convertShopUserToDTO(savedShopUser, userToAdd);
         // Audit log
-        try {
-            auditService.logAuditLongId(shopId, AuditAction.SHOP.name(), shopId, AuditAction.SHOP_UPDATED, currentUserId, null,
-                "User " + userToAdd.getName() + " added with role " + shopUserDTO.getRole());
-        } catch (Exception e) {
-            log.error("Error logging audit for adding user to shop", e);
-        }
+        logShopAudit(shopId, AuditAction.SHOP_UPDATED, currentUserId, null, resultDTO);
 
-        return convertShopUserToDTO(savedShopUser, userToAdd);
+        return resultDTO;
     }
 
     /**
@@ -211,6 +192,7 @@ public class ShopService {
     /**
      * Update user role in a shop
      */
+    @Transactional
     public ShopUserDTO updateUserRoleInShop(Long shopId, Long shopUserId, ShopUser.ShopUserRole newRole, Long currentUserId) {
         // Verify shop exists and current user is owner
         shopUserRepository.findOwnerByShopIdAndUserId(shopId, currentUserId)
@@ -223,7 +205,6 @@ public class ShopService {
         if (!shopUser.getShop().getId().equals(shopId)) {
             throw new ApplicationException("User does not belong to this shop");
         }
-
         // Cannot downgrade the only owner
         if (shopUser.getRole() == ShopUser.ShopUserRole.OWNER && newRole != ShopUser.ShopUserRole.OWNER) {
             List<ShopUser> owners = shopUserRepository.findAllActiveByShopId(shopId).stream()
@@ -233,29 +214,24 @@ public class ShopService {
                 throw new ApplicationException("Cannot remove the only owner from the shop");
             }
         }
+        // Eagerly load user data before returning
+        User user = shopUser.getUser();
+        // Store old value for audit
+        ShopUserDTO oldShopUserDTO = convertShopUserToDTO(shopUser, user);
 
-        ShopUser.ShopUserRole oldRole = shopUser.getRole();
         shopUser.setRole(newRole);
         ShopUser updatedShopUser = shopUserRepository.save(shopUser);
-
-        // Eagerly load user data before returning
-        User user = updatedShopUser.getUser();
-
+        ShopUserDTO resultDTO = convertShopUserToDTO(updatedShopUser, user);
         // Audit log
-        try {
-            String oldValue = "{\"role\":\"" + oldRole + "\"}";
-            String newValue = "{\"role\":\"" + newRole + "\"}";
-            auditService.logAuditLongId(shopId, AuditAction.SHOP.name(), shopId, AuditAction.SHOP_UPDATED, currentUserId, oldValue, newValue);
-        } catch (Exception e) {
-            log.error("Error logging audit for role update", e);
-        }
+        logShopAudit(shopId, AuditAction.SHOP_UPDATED, currentUserId, oldShopUserDTO, resultDTO);
 
-        return convertShopUserToDTO(updatedShopUser, user);
+        return resultDTO;
     }
 
     /**
      * Remove user from shop
      */
+    @Transactional
     public void removeUserFromShop(Long shopId, Long shopUserId, Long currentUserId) {
         // Verify shop exists and current user is owner
         shopUserRepository.findOwnerByShopIdAndUserId(shopId, currentUserId)
@@ -278,16 +254,15 @@ public class ShopService {
                 throw new ApplicationException("Cannot remove the only owner from the shop");
             }
         }
-
+        // Eagerly load user data before returning
+        User user = shopUser.getUser();
+        // Store old value for audit
+        ShopUserDTO oldShopUserDTO = convertShopUserToDTO(shopUser, user);
         shopUser.setStatus(ShopUser.ShopUserStatus.INACTIVE);
-        shopUserRepository.save(shopUser);
+        ShopUser updatedShopUser = shopUserRepository.save(shopUser);
 
         // Audit log
-        try {
-            auditService.logAuditLongId(shopId, AuditAction.SHOP.name(), shopId, AuditAction.SHOP_UPDATED, currentUserId, null, "User removed from shop");
-        } catch (Exception e) {
-            log.error("Error logging audit for user removal", e);
-        }
+        logShopAudit(shopId, AuditAction.SHOP_UPDATED, currentUserId, oldShopUserDTO, convertShopUserToDTO(updatedShopUser, user));
     }
 
     /**
@@ -306,5 +281,17 @@ public class ShopService {
         dto.setJoinedAt(shopUser.getJoinedAt());
         return dto;
     }
-}
 
+    /**
+     * Log audit for shop actions
+     */
+    private void logShopAudit(Long shopId, AuditAction action, Long userId, Object oldValue, Object newValue) {
+        try {
+            String oldVal = oldValue != null ? objectMapper.writeValueAsString(oldValue) : null;
+            String newVal = newValue != null ? objectMapper.writeValueAsString(newValue) : null;
+            auditService.logAuditLongId(shopId, AuditAction.SHOP.name(), shopId, action, userId, oldVal, newVal);
+        } catch (Exception e) {
+            log.error("Error logging audit for shop operation: " + action.name(), e);
+        }
+    }
+}

@@ -66,9 +66,9 @@
                       (change)="onFilterChange()"
                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors text-sm">
                 <option value="">All Types</option>
-                <option value="BAKI">Baki (Debit)</option>
-                <option value="PAID">Paid (Credit)</option>
-                <option value="REVERSAL">Reversal</option>
+                <option value="BAKI">Debit (बाकी)</option>
+                <option value="PAID">Credit (जमा)</option>
+                <option value="REVERSAL">Reversal (उलट)</option>
               </select>
             </div>
 
@@ -123,7 +123,7 @@
         <div class="bg-white rounded-lg shadow-md p-4 border-l-4 border-red-500">
           <div class="flex items-center justify-between">
             <div class="flex-1">
-              <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Total Debit (Baki)</p>
+              <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Total Debit (एकूण बाकी)</p>
               <p class="text-2xl font-bold text-red-600 mt-1">{{ formatCurrency(totalDebit) }}</p>
             </div>
             <div class="bg-red-100 p-2 rounded-lg flex-shrink-0 hidden md:block">
@@ -136,7 +136,7 @@
         <div class="bg-white rounded-lg shadow-md p-4 border-l-4 border-emerald-500">
           <div class="flex items-center justify-between">
             <div class="flex-1">
-              <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Total Credit (Paid)</p>
+              <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">Total Credit (एकूण जमा)</p>
               <p class="text-2xl font-bold text-emerald-600 mt-1">{{ formatCurrency(totalCredit) }}</p>
             </div>
             <div class="bg-emerald-100 p-2 rounded-lg flex-shrink-0 hidden md:block">
@@ -149,7 +149,7 @@
         <div class="bg-white rounded-lg shadow-md p-4 border-l-4" [ngClass]="netBalance >= 0 ? 'border-orange-500' : 'border-purple-500'">
           <div class="flex items-center justify-between">
             <div class="flex-1">
-              <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">You Will Get</p>
+              <p class="text-xs font-medium text-gray-500 uppercase tracking-wide">You Will Get (निव्वळ बाकी)</p>
               <p class="text-2xl font-bold mt-1" [ngClass]="netBalance >= 0 ? 'text-orange-600' : 'text-purple-600'">
                 {{ formatCurrency(netBalance) }}
               </p>
@@ -214,7 +214,7 @@
               <td class="px-4 py-2 whitespace-nowrap">
                 <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium gap-1" [ngClass]="getEntryTypeColor(entry.entryType)">
                   <i [ngClass]="'fas ' + getEntryTypeIcon(entry.entryType)"></i>
-                  {{ entry.entryType }}
+                  {{ getEntryTypeLabel(entry.entryType) }}
                 </span>
               </td>
               <td class="px-4 py-2 whitespace-nowrap text-right font-semibold text-sm" [ngClass]="{
@@ -317,7 +317,7 @@
                     <p class="text-lg font-bold">
                         <span [ngClass]="getEntryTypeColor(selectedEntry.entryType)" class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium gap-2">
                             <i [ngClass]="'fas ' + getEntryTypeIcon(selectedEntry.entryType)"></i>
-                            {{ selectedEntry.entryType }}
+                            {{ getEntryTypeLabel(selectedEntry.entryType) }}
                         </span>
                     </p>
                 </div>

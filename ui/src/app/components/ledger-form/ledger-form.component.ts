@@ -150,15 +150,10 @@ export class LedgerFormComponent implements OnInit {
   }
 
   getEntryTypeLabel(type: string): string {
-    if (type === LedgerEntryType.BAKI) return 'Baki (Debit/Increase Balance)';
-    if (type === LedgerEntryType.PAID) return 'Paid (Credit/Decrease Balance)';
-    if (type === LedgerEntryType.REVERSAL) return 'Reversal (Undo Entry)';
+    if (type === LedgerEntryType.BAKI) return 'Debit-Increase Balance (बाकी)';
+    if (type === LedgerEntryType.PAID) return 'Credit-Decrease Balance (जमा)';
+    if (type === LedgerEntryType.REVERSAL) return 'Reversal-Undo Entry (उलट)';
     return type;
-  }
-
-  formatCurrency(value: number | undefined): string {
-    if (!value) return '0.00';
-    return value.toFixed(2);
   }
 }
 

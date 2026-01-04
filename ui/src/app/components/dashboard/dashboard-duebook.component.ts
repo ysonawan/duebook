@@ -155,7 +155,7 @@ export class DashboardDuebookComponent implements OnInit {
         }
       },
       legend: {
-        data: ['Debit (Baki)', 'Credit (Paid)'],
+        data: ['Debit (बाकी)', 'Credit (जमा)'],
         textStyle: { fontSize: isMobile ? 10 : 11 }
       },
       grid: {
@@ -179,7 +179,7 @@ export class DashboardDuebookComponent implements OnInit {
       },
       series: [
         {
-          name: 'Debit (Baki)',
+          name: 'Debit (बाकी)',
           data: debits,
           type: 'line',
           smooth: true,
@@ -187,7 +187,7 @@ export class DashboardDuebookComponent implements OnInit {
           areaStyle: { color: 'rgba(255, 107, 107, 0.2)' }
         },
         {
-          name: 'Credit (Paid)',
+          name: 'Credit (जमा)',
           data: credits,
           type: 'line',
           smooth: true,
@@ -252,8 +252,8 @@ export class DashboardDuebookComponent implements OnInit {
   prepareEntryTypeChart(): void {
     // Data is already computed on backend
     const data = [
-      { name: 'Baki (Debit)', value: this.entryTypeDistribution?.bakiCount || 0, itemStyle: { color: '#FF6B6B' } },
-      { name: 'Paid (Credit)', value: this.entryTypeDistribution?.paidCount || 0, itemStyle: { color: '#51CF66' } }
+      { name: 'Debit (बाकी)', value: this.entryTypeDistribution?.bakiCount || 0, itemStyle: { color: '#FF6B6B' } },
+      { name: 'Credit (जमा)', value: this.entryTypeDistribution?.paidCount || 0, itemStyle: { color: '#51CF66' } }
     ].filter(d => d.value > 0);
 
     this.hasEntryTypeData = data.length > 0;
@@ -294,12 +294,6 @@ export class DashboardDuebookComponent implements OnInit {
         }
       ]
     };
-  }
-
-  getShopName(shopId: number | undefined): string {
-    if (!shopId) return 'N/A';
-    const shop = this.shopDistribution.find(s => s.shopId === shopId);
-    return shop?.shopName || 'N/A';
   }
 
   getColorForIndex(index: number): string {

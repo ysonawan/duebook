@@ -23,6 +23,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.Map;
+import java.util.HashMap;
 
 @Service
 @RequiredArgsConstructor
@@ -94,12 +96,7 @@ public class CustomerLedgerService {
         CustomerLedger savedLedger = ledgerRepository.save(ledger);
 
         // Audit log: Ledger entry created
-        try {
-            String newValue = objectMapper.writeValueAsString(convertToDTO(savedLedger));
-            auditService.logAuditLongId(shop.getId(), AuditAction.LEDGER.name(), savedLedger.getId(), AuditAction.LEDGER_ENTRY_CREATED, userId, null, newValue);
-        } catch (Exception e) {
-            log.error("Error logging audit for ledger entry creation", e);
-        }
+        logAudit(shop.getId(), AuditAction.LEDGER.name(), savedLedger.getId(), AuditAction.LEDGER_ENTRY_CREATED, userId, null, convertToDTO(savedLedger));
 
         return convertToDTO(savedLedger);
     }
@@ -159,13 +156,7 @@ public class CustomerLedgerService {
         CustomerLedger savedReversal = ledgerRepository.save(reversalEntry);
 
         // Audit log: Ledger reversal
-        try {
-            String oldValue = objectMapper.writeValueAsString(convertToDTO(originalEntry));
-            String newValue = objectMapper.writeValueAsString(convertToDTO(savedReversal));
-            auditService.logAuditLongId(originalEntry.getShop().getId(), AuditAction.LEDGER.name(), savedReversal.getId(), AuditAction.LEDGER_REVERSAL, userId, oldValue, newValue);
-        } catch (Exception e) {
-            log.error("Error logging audit for ledger reversal", e);
-        }
+        logAudit(originalEntry.getShop().getId(), AuditAction.LEDGER.name(), savedReversal.getId(), AuditAction.LEDGER_REVERSAL, userId, convertToDTO(originalEntry), convertToDTO(savedReversal));
 
         return convertToDTO(savedReversal);
     }
@@ -314,21 +305,13 @@ public class CustomerLedgerService {
         customerRepository.save(customer);
 
         // Audit log: Customer balance adjusted
-        try {
-            log.debug("Customer ID: {} balance updated from {} to {} (Entry Type: {})",
-                customer.getId(), oldBalance, currentBalance, ledger.getEntryType());
-            auditService.logAuditLongId(
-                customer.getShop().getId(),
-                AuditAction.CUSTOMER.name(),
-                customer.getId(),
-                AuditAction.LEDGER_BALANCE_ADJUSTED,
-                ledger.getCreatedByUser().getId(),
-                String.format("{\"balance\": %.2f}", oldBalance),
-                String.format("{\"balance\": %.2f, \"amount\": %.2f, \"type\": \"%s\"}", currentBalance, ledger.getAmount(), ledger.getEntryType())
-            );
-        } catch (Exception e) {
-            log.error("Error logging audit for balance adjustment", e);
-        }
+        Map<String, Object> oldBalanceMap = new HashMap<>();
+        oldBalanceMap.put("balance", oldBalance);
+        Map<String, Object> newBalanceMap = new HashMap<>();
+        newBalanceMap.put("balance", currentBalance);
+        newBalanceMap.put("amount", ledger.getAmount());
+        newBalanceMap.put("type", ledger.getEntryType().name());
+        logAudit(customer.getShop().getId(), AuditAction.CUSTOMER.name(), customer.getId(), AuditAction.LEDGER_BALANCE_ADJUSTED, ledger.getCreatedByUser().getId(), oldBalanceMap, newBalanceMap);
     }
 
     public Page<CustomerLedgerDTO> getCustomerLedgerDTOs(Page<CustomerLedger> ledgerEntries) {
@@ -380,5 +363,18 @@ public class CustomerLedgerService {
         return shopUserRepository.findByShopIdAndUserId(shopId, userId)
             .map(su -> su.getRole() == ShopUser.ShopUserRole.OWNER || su.getRole() == ShopUser.ShopUserRole.STAFF)
             .orElse(false);
+    }
+
+    /**
+     * Log audit for ledger and customer operations
+     */
+    private void logAudit(Long shopId, String entityType, Long entityId, AuditAction action, Long userId, Object oldValue, Object newValue) {
+        try {
+            String oldVal = oldValue != null ? objectMapper.writeValueAsString(oldValue) : null;
+            String newVal = newValue != null ? objectMapper.writeValueAsString(newValue) : null;
+            auditService.logAuditLongId(shopId, entityType, entityId, action, userId, oldVal, newVal);
+        } catch (Exception e) {
+            log.error("Error logging audit for " + entityType + " operation: " + action.name(), e);
+        }
     }
 }

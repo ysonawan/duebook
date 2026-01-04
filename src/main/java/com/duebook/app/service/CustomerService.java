@@ -93,12 +93,7 @@ public class CustomerService {
         }
 
         // Audit log: Customer created
-        try {
-            String newValue = objectMapper.writeValueAsString(convertToDTO(savedCustomer));
-            auditService.logAuditLongId(shop.getId(), AuditAction.CUSTOMER.name(), savedCustomer.getId(), AuditAction.CUSTOMER_CREATED, userId, null, newValue);
-        } catch (Exception e) {
-            log.error("Error logging audit for customer creation", e);
-        }
+        logAudit(shop.getId(), AuditAction.CUSTOMER.name(), savedCustomer.getId(), AuditAction.CUSTOMER_CREATED, userId, null, convertToDTO(savedCustomer));
 
         return convertToDTO(savedCustomer);
     }
@@ -125,12 +120,7 @@ public class CustomerService {
         }
 
         // Store old value for audit
-        String oldValue = null;
-        try {
-            oldValue = objectMapper.writeValueAsString(convertToDTO(customer));
-        } catch (Exception e) {
-            log.error("Error serializing old customer value for audit", e);
-        }
+        CustomerDTO oldCustomerDTO = convertToDTO(customer);
 
         // Update the customer
         customer.setName(customerDTO.getName().trim());
@@ -147,12 +137,7 @@ public class CustomerService {
         Customer updatedCustomer = customerRepository.save(customer);
 
         // Audit log: Customer updated
-        try {
-            String newValue = objectMapper.writeValueAsString(convertToDTO(updatedCustomer));
-            auditService.logAuditLongId(shop.getId(), AuditAction.CUSTOMER.name(), updatedCustomer.getId(), AuditAction.CUSTOMER_UPDATED, userId, oldValue, newValue);
-        } catch (Exception e) {
-            log.error("Error logging audit for customer update", e);
-        }
+        logAudit(shop.getId(), AuditAction.CUSTOMER.name(), updatedCustomer.getId(), AuditAction.CUSTOMER_UPDATED, userId, oldCustomerDTO, convertToDTO(updatedCustomer));
 
         return convertToDTO(updatedCustomer);
     }
@@ -197,6 +182,19 @@ public class CustomerService {
     }
 
     /**
+     * Log audit for customer and ledger operations
+     */
+    private void logAudit(Long shopId, String entityType, Long entityId, AuditAction action, Long userId, Object oldValue, Object newValue) {
+        try {
+            String oldVal = oldValue != null ? objectMapper.writeValueAsString(oldValue) : null;
+            String newVal = newValue != null ? objectMapper.writeValueAsString(newValue) : null;
+            auditService.logAuditLongId(shopId, entityType, entityId, action, userId, oldVal, newVal);
+        } catch (Exception e) {
+            log.error("Error logging audit for " + entityType + " operation: " + action.name(), e);
+        }
+    }
+
+    /**
      * Helper: Create opening balance ledger entry for a new customer
      * Creates a BAKI (Debit) entry to track the opening balance
      */
@@ -219,12 +217,7 @@ public class CustomerService {
             ledgerEntry.setCreatedAt(LocalDateTime.now());
 
             customerLedgerRepository.save(ledgerEntry);
-            try {
-                String newValue = objectMapper.writeValueAsString(convertToDTO(ledgerEntry));
-                auditService.logAuditLongId(customer.getShop().getId(), AuditAction.LEDGER.name(), ledgerEntry.getId(), AuditAction.LEDGER_ENTRY_CREATED, userId, null, newValue);
-            } catch (Exception e) {
-                log.error("Error logging audit for ledger entry creation", e);
-            }
+            logAudit(customer.getShop().getId(), AuditAction.LEDGER.name(), ledgerEntry.getId(), AuditAction.LEDGER_ENTRY_CREATED, userId, null, convertToDTO(ledgerEntry));
         } catch (Exception e) {
             // Log the exception but don't fail the customer creation
             // The customer is already created, we just couldn't create the ledger entry

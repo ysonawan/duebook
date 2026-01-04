@@ -246,6 +246,19 @@ export class LedgerComponent implements OnInit {
     return shop?.name || 'N/A';
   }
 
+  getEntryTypeLabel(type: LedgerEntryType): string {
+    switch (type) {
+      case LedgerEntryType.BAKI:
+        return 'Debit (बाकी)';
+      case LedgerEntryType.PAID:
+        return 'Credit (जमा)';
+      case LedgerEntryType.REVERSAL:
+        return 'Reversal (उलट)';
+      default:
+        return 'Unknown';
+    }
+  }
+
   getEntryTypeIcon(type: LedgerEntryType): string {
     switch (type) {
       case LedgerEntryType.BAKI:
