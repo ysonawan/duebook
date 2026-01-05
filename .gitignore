@@ -61,6 +61,6 @@ coverage/
 logs/
 *.log
 
-config
+config/application.properties
 
 ui/.angular/
