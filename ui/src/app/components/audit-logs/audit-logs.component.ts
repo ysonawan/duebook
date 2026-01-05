@@ -4,7 +4,6 @@ import { AuditLog } from '../../models/audit-log.model';
 import { Shop } from '../../models/shop.model';
 import { ShopService } from '../../services/shop.service';
 import { TimezoneService } from '../../services/timezone.service';
-import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-audit-logs',
@@ -54,7 +53,7 @@ export class AuditLogsComponent implements OnInit {
     this.shopService.getAllShops().subscribe({
       next: (shops) => {
         this.shops = shops.filter(s => s.isActive !== false);
-
+        this.loading = false;
         // Set selected shop to "All Shops" by default (null)
         this.selectedShopId = 0;
         this.loadAuditLogs();
