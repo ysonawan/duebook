@@ -8,7 +8,7 @@
 
 ---- Create User ----
 -- https://vault.zoho.in#/unlock/extension?routeName=%23%2Fpasscard%2F63500000000007049
-CREATE USER duebook_app_user WITH ENCRYPTED PASSWORD '123456';
+CREATE USER duebook_app_user WITH ENCRYPTED PASSWORD '<replace_with_password_from_vault>';
 
 ---- Grant privileges to the user ----
 GRANT CONNECT ON DATABASE duebook_app TO duebook_app_user;
