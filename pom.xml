@@ -13,7 +13,7 @@
     </parent>
 
     <groupId>com.duebook</groupId>
-    <artifactId>duebook-app</artifactId>
+    <artifactId>duebook</artifactId>
     <version>1.0.0</version>
     <name>Duebook</name>
     <description>Duebook Application</description>

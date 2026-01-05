@@ -36,7 +36,7 @@ server {
 
     # API endpoints - proxy to Spring Boot
     location /api/ {
-        proxy_pass http://localhost:9080/api/;
+        proxy_pass http://localhost:8083/api/;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -51,7 +51,7 @@ server {
 
     # Serve Angular application (frontend static files)
     location / {
-        proxy_pass http://localhost:9080/;
+        proxy_pass http://localhost:8083/;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';

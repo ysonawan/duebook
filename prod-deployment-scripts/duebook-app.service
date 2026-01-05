@@ -1,0 +1,16 @@
+[Unit]
+Description=Duebook Application
+
+After=network.target nginx.service postgresql.service
+Requires=nginx.service postgresql.service
+
+[Service]
+Restart=always
+RestartSec=5
+User=root
+WorkingDirectory=/opt/app/duebook
+ExecStart=/usr/bin/java -jar /opt/app/duebook/duebook.jar
+SuccessExitStatus=143
+
+[Install]
+WantedBy=multi-user.target
