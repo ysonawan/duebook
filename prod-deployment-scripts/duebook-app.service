@@ -9,8 +9,30 @@ Restart=always
 RestartSec=5
 User=root
 WorkingDirectory=/opt/app/duebook
-ExecStart=/usr/bin/java -jar /opt/app/duebook/duebook.jar
+
+# JVM memory flags for duebook (2GB heap, conservative allocation)
+ExecStart=/usr/bin/java \
+  -Xmx2g \
+  -Xms1g \
+  -XX:MaxDirectMemorySize=512m \
+  -XX:MaxMetaspaceSize=256m \
+  -XX:MetaspaceSize=128m \
+  -XX:+UseG1GC \
+  -XX:MaxGCPauseMillis=300 \
+  -XX:G1HeapRegionSize=8m \
+  -Xss256k \
+  -Xlog:gc*:file=/var/log/duebook/gc.log:time,uptime:filecount=5,filesize=10m \
+  -jar /opt/app/duebook/duebook.jar
+
 SuccessExitStatus=143
+
+# Systemd memory limits
+MemoryLimit=3G
+MemoryHigh=2.5G
+CPUQuota=200%
+
+# OOM protection
+OOMScoreAdjust=-500
 
 [Install]
 WantedBy=multi-user.target
