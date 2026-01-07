@@ -77,7 +77,8 @@ export interface PaymentHealthMetricsDTO {
   providedIn: 'root'
 })
 export class DashboardService {
-  private apiUrl = '/api/dashboard';
+  private apiUrl = environment.apiUrl || 'http://localhost:8083/api';
+
 
   constructor(private http: HttpClient) {}
 
@@ -85,14 +86,14 @@ export class DashboardService {
    * Get comprehensive dashboard metrics
    */
   getDashboardMetrics(): Observable<DashboardMetricsDTO> {
-    return this.http.get<DashboardMetricsDTO>(`${this.apiUrl}/metrics`);
+    return this.http.get<DashboardMetricsDTO>(`${this.apiUrl}/dashboard/metrics`);
   }
 
   /**
    * Get dashboard metrics filtered by shop ID
    */
   getDashboardMetricsByShop(shopId: number): Observable<DashboardMetricsDTO> {
-    return this.http.get<DashboardMetricsDTO>(`${this.apiUrl}/metrics/shop/${shopId}`);
+    return this.http.get<DashboardMetricsDTO>(`${this.apiUrl}/dashboard/metrics/shop/${shopId}`);
   }
 }
 

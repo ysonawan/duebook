@@ -20,14 +20,6 @@ export class UserService {
     return this.http.put<UserProfile>(`${this.apiUrl}/user/profile/basic`, request);
   }
 
-  sendPortfolioReport(): Observable<string> {
-    return this.http.post(`${this.apiUrl}/user/profile/send-portfolio-report`, {}, { responseType: 'text' as const });
-  }
-
-  sendBudgetReport(): Observable<string> {
-    return this.http.post(`${this.apiUrl}/user/profile/send-budget-report`, {}, { responseType: 'text' as const });
-  }
-
   requestOtpForPrimaryEmailChange(newEmail: string): Observable<string> {
     return this.http.post(`${this.apiUrl}/user/profile/request-otp-for-primary-email`,
       { newEmail }, { responseType: 'text' as const });

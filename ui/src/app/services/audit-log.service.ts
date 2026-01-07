@@ -1,13 +1,13 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { AuditLog } from '../models/audit-log.model';
+import {environment} from "../../environments/environment.development";
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuditLogService {
-  private apiUrl = '/api/audit-logs';
+  private apiUrl = environment.apiUrl || 'http://localhost:8083/api';
 
   constructor(private http: HttpClient) {}
 
@@ -43,21 +43,21 @@ export class AuditLogService {
       params = params.set('endDate', endDate);
     }
 
-    return this.http.get<any>(`${this.apiUrl}/shop/${shopId}/paginated`, { params });
+    return this.http.get<any>(`${this.apiUrl}/audit-logs/shop/${shopId}/paginated`, { params });
   }
 
   /**
    * Get distinct actions for a shop
    */
   getDistinctActions(): Observable<string[]> {
-    return this.http.get<string[]>(`${this.apiUrl}/actions`);
+    return this.http.get<string[]>(`${this.apiUrl}/audit-logs/actions`);
   }
 
   /**
    * Get distinct entity types for a shop
    */
   getDistinctEntityTypes(): Observable<string[]> {
-    return this.http.get<string[]>(`${this.apiUrl}/entity-types`);
+    return this.http.get<string[]>(`${this.apiUrl}/audit-logs/entity-types`);
   }
 }
 

@@ -2,7 +2,7 @@
 <configuration>
     <property name="LOG_HOME" value="${LOG_HOME:-./logs}"/>
     <appender name="ROLLING" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${LOG_HOME}/duebook.log</file>
+        <file>${LOG_HOME}/duebook-app.log</file>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <fileNamePattern>${LOG_HOME}/duebook-app.%d{yyyy-MM-dd}.log</fileNamePattern>
             <maxHistory>30</maxHistory>

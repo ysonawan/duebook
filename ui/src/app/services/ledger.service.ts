@@ -2,41 +2,31 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { CustomerLedger } from '../models/ledger.model';
+import {environment} from "../../environments/environment.development";
 
 @Injectable({
   providedIn: 'root'
 })
 export class LedgerService {
-  private apiUrl = '/api/ledger';
+  private apiUrl = environment.apiUrl || 'http://localhost:8083/api';
+
 
   constructor(private http: HttpClient) {}
 
-  getAllLedgerEntries(): Observable<CustomerLedger[]> {
-    return this.http.get<CustomerLedger[]>(this.apiUrl);
-  }
-
-  getLedgerById(id: number): Observable<CustomerLedger> {
-    return this.http.get<CustomerLedger>(`${this.apiUrl}/${id}`);
-  }
-
-  getLedgerByCustomerId(customerId: number): Observable<CustomerLedger[]> {
-    return this.http.get<CustomerLedger[]>(`${this.apiUrl}/customer/${customerId}`);
-  }
-
   createLedgerEntry(entry: CustomerLedger): Observable<CustomerLedger> {
-    return this.http.post<CustomerLedger>(this.apiUrl, entry);
+    return this.http.post<CustomerLedger>(`${this.apiUrl}/ledger`, entry);
   }
 
   reverseLedgerEntry(entryId: number, notes?: string): Observable<CustomerLedger> {
-    return this.http.post<CustomerLedger>(`${this.apiUrl}/${entryId}/reverse`, { notes });
+    return this.http.post<CustomerLedger>(`${this.apiUrl}/ledger/${entryId}/reverse`, { notes });
   }
 
   getLedgerByShop(shopId: number): Observable<CustomerLedger[]> {
-    return this.http.get<CustomerLedger[]>(`${this.apiUrl}/shop/${shopId}`);
+    return this.http.get<CustomerLedger[]>(`${this.apiUrl}/ledger/shop/${shopId}`);
   }
 
   getLedgerByDateRange(startDate: string, endDate: string): Observable<CustomerLedger[]> {
-    return this.http.get<CustomerLedger[]>(`${this.apiUrl}/date-range`, {
+    return this.http.get<CustomerLedger[]>(`${this.apiUrl}/ledger/date-range`, {
       params: { startDate, endDate }
     });
   }
@@ -73,7 +63,7 @@ export class LedgerService {
       params = params.set('endDate', endDate);
     }
 
-    return this.http.get<any>(`${this.apiUrl}/shop/${shopId}/paginated`, { params });
+    return this.http.get<any>(`${this.apiUrl}/ledger/shop/${shopId}/paginated`, { params });
   }
 
   /**
@@ -105,7 +95,7 @@ export class LedgerService {
       params = params.set('endDate', endDate);
     }
 
-    return this.http.get<any>(`${this.apiUrl}/shop/${shopId}/summary`, { params });
+    return this.http.get<any>(`${this.apiUrl}/ledger/shop/${shopId}/summary`, { params });
   }
 }
 

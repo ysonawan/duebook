@@ -2,33 +2,34 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { Customer } from '../models/customer.model';
+import {environment} from "../../environments/environment.development";
 
 @Injectable({
   providedIn: 'root'
 })
 export class CustomerService {
-  private apiUrl = '/api/customers';
+  private apiUrl = environment.apiUrl || 'http://localhost:8083/api';
 
   constructor(private http: HttpClient) {}
 
   getAllCustomers(): Observable<Customer[]> {
-    return this.http.get<Customer[]>(this.apiUrl);
+    return this.http.get<Customer[]>(`${this.apiUrl}/customers`);
   }
 
   getCustomerById(id: number): Observable<Customer> {
-    return this.http.get<Customer>(`${this.apiUrl}/${id}`);
+    return this.http.get<Customer>(`${this.apiUrl}/customers/${id}`);
   }
 
   createCustomer(customer: Customer): Observable<Customer> {
-    return this.http.post<Customer>(this.apiUrl, customer);
+    return this.http.post<Customer>(`${this.apiUrl}/customers`, customer);
   }
 
   updateCustomer(id: number, customer: Customer): Observable<Customer> {
-    return this.http.put<Customer>(`${this.apiUrl}/${id}`, customer);
+    return this.http.put<Customer>(`${this.apiUrl}/customers/${id}`, customer);
   }
 
   getCustomersByShop(shopId: number): Observable<Customer[]> {
-    return this.http.get<Customer[]>(`${this.apiUrl}/shops/${shopId}/active`);
+    return this.http.get<Customer[]>(`${this.apiUrl}/customers/shops/${shopId}/active`);
   }
 
   /**
@@ -53,7 +54,7 @@ export class CustomerService {
       params = params.set('searchTerm', searchTerm);
     }
 
-    return this.http.get<any>(`${this.apiUrl}/shop/${shopId}/paginated`, { params });
+    return this.http.get<any>(`${this.apiUrl}/customers/shop/${shopId}/paginated`, { params });
   }
 
   /**
@@ -75,6 +76,6 @@ export class CustomerService {
       params = params.set('searchTerm', searchTerm);
     }
 
-    return this.http.get<any>(`${this.apiUrl}/shop/${shopId}/summary`, { params });
+    return this.http.get<any>(`${this.apiUrl}/customers/shop/${shopId}/summary`, { params });
   }
 }
